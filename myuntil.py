@@ -22,9 +22,9 @@ class Delta1(Decorator):
             name (:obj:`str`): the decorator name
         """
         super(Delta1, self).__init__(name=name, child=child)
-        self.last_time_step = common.Status.SUCCESS
+        # self.last_time_step = common.Status.SUCCESS
         # self.is_first_time = True
-        self.is_false_yet = False
+        # self.is_false_yet = False
 
     def update(self):
         """
@@ -36,17 +36,17 @@ class Delta1(Decorator):
         """
         return_status = None
 
-        if not self.is_false_yet:
-            return_status = self.last_time_step
-            if self.decorated.status == common.Status.SUCCESS:
-                self.last_time_step = common.Status.SUCCESS
-            elif self.decorated.status == common.Status.FAILURE:
-                self.is_false_yet = True
-                self.last_time_step = common.Status.FAILURE
-        else:
-            return_status = common.Status.FAILURE
+        # if not self.is_false_yet:
+        #     return_status = self.last_time_step
+        #     if self.decorated.status == common.Status.SUCCESS:
+        #         self.last_time_step = common.Status.SUCCESS
+        #     elif self.decorated.status == common.Status.FAILURE:
+        #         self.is_false_yet = True
+        #         self.last_time_step = common.Status.FAILURE
+        # else:
+        #     return_status = common.Status.FAILURE
 
-        return return_status
+        return self.decorated.status
 
 
 class Delta2(Decorator):
@@ -223,10 +223,10 @@ def ltl():
     t1 = [
         {"a": True, "b": False},
         {"a": True, "b": False},    
-        {"a": False, "b": False},
-        {"a": True, "b": True},
-        # {"a": False, "b": True},
-        # {"a": False, "b": True},                
+        {"a": True, "b": False},
+        # {"a": True, "b": True},
+        {"a": False, "b": True},
+        # {"a": False, "b": False},                
     ]
     # assert parsed_formula.truth(t1, 0)
     print('real LTL',parsed_formula.truth(t1))
