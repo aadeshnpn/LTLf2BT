@@ -44,7 +44,7 @@ class Delta1(Decorator):
                 self.is_false_yet = True
                 self.last_time_step = common.Status.FAILURE
         else:
-            return_status = common.Status.SUCCESS
+            return_status = common.Status.FAILURE
 
         return return_status
 
@@ -72,12 +72,12 @@ class Delta2(Decorator):
         Returns:
             :class:`~py_trees.common.Status`: the behaviour's new status :class:`~py_trees.common.Status`
         """
-        return_status = self.last_time_step
-        if self.decorated.status == common.Status.SUCCESS:
-            self.last_time_step = common.Status.SUCCESS
-        elif self.decorated.status == common.Status.FAILURE:
-            self.last_time_step = common.Status.FAILURE
-
+        # return_status = self.last_time_step
+        # if self.decorated.status == common.Status.SUCCESS:
+        #     self.last_time_step = common.Status.SUCCESS
+        # elif self.decorated.status == common.Status.FAILURE:
+        #     self.last_time_step = common.Status.FAILURE
+        return_status = self.decorated.status
         return return_status        
 
 
@@ -105,15 +105,17 @@ class DeltaG(Decorator):
         Returns:
             :class:`~py_trees.common.Status`: the behaviour's new status :class:`~py_trees.common.Status`
         """
-        if self.decorated.status == common.Status.SUCCESS:
-            self.start_append = True
+        # if self.decorated.status == common.Status.SUCCESS:
+        #     self.start_append = True
 
         # Only append when you get success
-        if self.start_append:
-            self.trace.append(self.decorated.status)
+        # if self.start_append:
+        self.trace.append(self.decorated.status)
 
-        if len(self.trace) < 1:
-            return self.decorated.status            
+        # if len(self.trace) < 1:
+        #    return self.decorated.status    
+        #
+        print(self.trace)        
         for val in self.trace:
             if val != common.Status.SUCCESS:
                 return common.Status.FAILURE
@@ -168,24 +170,25 @@ def skeleton(trace):
     main = Sequence('R')
 
     # Left sub-tree
-    seqleft = Sequence('Left')
+    seleleft = Selector('Left')
     goal1 = LTLNode('g1')
     goal11 = copy.copy(goal1)
     delta1 = Delta1(goal1)
+    delta11 = copy.copy(Delta1(goal11))
     goal2 = LTLNode('g2')    
     goal22 = copy.copy(goal2)    
     deltag = DeltaG(goal2)
-    seqleft.add_children([delta1, deltag])
+    seleleft.add_children([delta1, deltag])
     
     # Right sub-tree
-    seqright = Selector('Right')    
+    seqright = Sequence('Right')    
     delta2 = Delta2(goal22)
 
-    seqright.add_children([delta2, goal11])
+    seqright.add_children([delta2])
 
     # Main tree
     # main.add_children([seqleft, delta2])
-    main.add_children([seqleft, seqright])
+    main.add_children([seleleft, seqright])
 
     root = BehaviourTree(main)
     i = 0
