@@ -24,7 +24,7 @@ class Delta1(Decorator):
         super(Delta1, self).__init__(name=name, child=child)
         # self.last_time_step = common.Status.SUCCESS
         # self.is_first_time = True
-        # self.is_false_yet = False
+        self.is_false_yet = False
 
     def update(self):
         """
@@ -36,17 +36,17 @@ class Delta1(Decorator):
         """
         return_status = None
 
-        # if not self.is_false_yet:
-        #     return_status = self.last_time_step
-        #     if self.decorated.status == common.Status.SUCCESS:
-        #         self.last_time_step = common.Status.SUCCESS
-        #     elif self.decorated.status == common.Status.FAILURE:
-        #         self.is_false_yet = True
-        #         self.last_time_step = common.Status.FAILURE
-        # else:
-        #     return_status = common.Status.FAILURE
+        if not self.is_false_yet:
+            # return_status = self.last_time_step
+            if self.decorated.status == common.Status.SUCCESS:
+                return_status = common.Status.SUCCESS
+            elif self.decorated.status == common.Status.FAILURE:
+                self.is_false_yet = True
+                return_status = common.Status.FAILURE
+        else:
+            return_status = common.Status.FAILURE
 
-        return self.decorated.status
+        return return_status
 
 
 class Delta2(Decorator):
@@ -115,7 +115,7 @@ class DeltaG(Decorator):
         # if len(self.trace) < 1:
         #    return self.decorated.status    
         #
-        print(self.trace)        
+        # print(self.trace)        
         for val in self.trace:
             if val != common.Status.SUCCESS:
                 return common.Status.FAILURE
@@ -151,7 +151,7 @@ class LTLNode(py_trees.behaviour.Behaviour):
         """
         Return the value.
         """
-        print('update',self.name, self.value, self.goalspec)
+        # print('update',self.name, self.value, self.goalspec)
         if self.value[self.goalspec]:
             return common.Status.SUCCESS
         else:
@@ -159,7 +159,7 @@ class LTLNode(py_trees.behaviour.Behaviour):
 
 
 def setup_nodes(nodes, i, trace):
-    print('a,b', i, trace[i])
+    # print('a,b', i, trace[i])
     nodes[0].setup(0, 'a', trace[i])
     nodes[1].setup(0, 'a', trace[i])    
     nodes[2].setup(0, 'b', trace[i])    
@@ -203,13 +203,17 @@ def skeleton(trace):
 
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
     output = py_trees.display.ascii_tree(root.root)
-    print(output)
+    # print(output)
 
     for k in range(len(trace)):
         setup_nodes([goal1, goal11, goal2, goal22], i, trace)
         root.tick()
-        print(root.root.status)
         i += 1
+    if root.root.status == common.Status.SUCCESS:
+        return True
+    else:
+        return False
+    # print(root.root.status)
 
 
 def ltl():
@@ -218,23 +222,77 @@ def ltl():
     parser = LTLfParser()
     formula = "(a U b)"
     parsed_formula = parser(formula)
+    t1 = [{
+        'a': False, 'b': False
+    }]
+    t2 = [{
+        'a': False, 'b': True
+    }]
+    t3 = [{
+        'a': True, 'b': False
+    }]
+    t4 = [{
+        'a': True, 'b': True
+    }]
+    t5 = [ 
+         [t1[0], t1[0]],
+         [t1[0], t2[0]],   
+         [t1[0], t3[0]],        
+         [t1[0], t4[0]],
+         [t2[0], t1[0]],
+         [t2[0], t2[0]],   
+         [t2[0], t3[0]],        
+         [t2[0], t4[0]],
+         [t3[0], t1[0]],
+         [t3[0], t2[0]],   
+         [t3[0], t3[0]],        
+         [t3[0], t4[0]],
+         [t4[0], t1[0]],
+         [t4[0], t2[0]],   
+         [t4[0], t3[0]],        
+         [t4[0], t4[0]]
+         ]
 
+    # t = [t1, t2, t3, t4, t5, t6, t7, t8]
+    # name = ['one', 'two', 'three', ' four', 'five', 'six', 'seven', 'eight']
     # evaluate over finite traces
-    t1 = [
-        {"a": True, "b": False},
-        {"a": True, "b": False},    
-        {"a": True, "b": False},
-        # {"a": True, "b": True},
-        {"a": False, "b": True},
-        # {"a": False, "b": False},                
-    ]
-    # assert parsed_formula.truth(t1, 0)
-    print('real LTL',parsed_formula.truth(t1))
+    # t1 = [
+    #     {"a": True, "b": False},
+    #     {"a": True, "b": False},    
+    #     {"a": True, "b": False},
+    #     {"a": False, "b": True},
+    # ]
 
-    # from LTLf formula to DFA
-    # dfa = parsed_formula.to_automaton()
-    # assert dfa.accepts(t1)
-    skeleton(t1)
+    # t1 = [
+    #     {"a": True, "b": False},
+    #     {"a": True, "b": True},    
+    # ]   
+
+    for t in [t1, t2, t3, t4]:
+        # assert parsed_formula.truth(t1, 0)
+        # print('real LTL',parsed_formula.truth(t), end=" ")
+
+        # from LTLf formula to DFA
+        # dfa = parsed_formula.to_automaton()
+        # assert dfa.accepts(t1)
+        # skeleton(t)
+        if parsed_formula.truth(t) == skeleton(t):
+            pass
+        else:
+            print(parsed_formula.truth(t), skeleton(t), t)
+
+    for t in t5:
+        #     # assert parsed_formula.truth(t1, 0)
+        #     print('real LTL',parsed_formula.truth(t), end=" ")
+
+        #     # from LTLf formula to DFA
+        #     # dfa = parsed_formula.to_automaton()
+        #     # assert dfa.accepts(t1)
+        #     skeleton(t)        
+        if parsed_formula.truth(t) == skeleton(t):
+            pass
+        else:
+            print(parsed_formula.truth(t), skeleton(t), t)    
 
 
 def main():
