@@ -23,7 +23,7 @@ class Delta1(Decorator):
         """
         super(Delta1, self).__init__(name=name, child=child)
         self.last_time_step = common.Status.SUCCESS
-        self.is_first_time = True
+        # self.is_first_time = True
         self.is_false_yet = False
 
     def update(self):
@@ -37,24 +37,16 @@ class Delta1(Decorator):
         return_status = None
 
         if not self.is_false_yet:
+            return_status = self.last_time_step
             if self.decorated.status == common.Status.SUCCESS:
-                # self.last_time_step = common.Status.SUCCESS
-                return_status = common.Status.SUCCESS
-                # return common.Status.SUCCESS
+                self.last_time_step = common.Status.SUCCESS
             elif self.decorated.status == common.Status.FAILURE:
                 self.is_false_yet = True
-                # self.last_time_step = common.Status.FAILURE
-                return_status = common.Status.FAILURE                
-                # return common.Status.FAILURE
-            # return self.decorated.status
+                self.last_time_step = common.Status.FAILURE
         else:
-            return_status = common.Status.FAILURE
+            return_status = common.Status.SUCCESS
 
-        if self.is_first_time:
-            self.is_first_time = False
-            return common.Status.SUCCESS
-        else:
-            return return_status
+        return return_status
 
 
 class Delta2(Decorator):
@@ -70,8 +62,7 @@ class Delta2(Decorator):
             name (:obj:`str`): the decorator name
         """
         super(Delta2, self).__init__(name=name, child=child)
-        self.last_time_step = common.Status.FAILURE
-        # self.is_true_yet = False
+        self.last_time_step = common.Status.SUCCESS
 
     def update(self):
         """
@@ -81,25 +72,13 @@ class Delta2(Decorator):
         Returns:
             :class:`~py_trees.common.Status`: the behaviour's new status :class:`~py_trees.common.Status`
         """
-        return_status = None
-
-        if self.last_time_step == common.Status.SUCCESS:
-            return_status = common.Status.SUCCESS
-
-
+        return_status = self.last_time_step
         if self.decorated.status == common.Status.SUCCESS:
-            curr_status = common.Status.SUCCESS
+            self.last_time_step = common.Status.SUCCESS
         elif self.decorated.status == common.Status.FAILURE:
-            curr_status = common.Status.FAILURE
-                
-        if common.Status.SUCCESS in [self.last_time_step, curr_status]:
-            return_status = common.Status.SUCCESS
-        else:
-            return_status = common.Status.FAILURE
-        self.last_time_step = return_status
+            self.last_time_step = common.Status.FAILURE
 
-        return return_status
-
+        return return_status        
 
 
 class DeltaG(Decorator):
@@ -116,6 +95,7 @@ class DeltaG(Decorator):
         """
         super(DeltaG, self).__init__(name=name, child=child)
         self.trace = []
+        self.start_append = False
 
     def update(self):
         """
@@ -125,7 +105,15 @@ class DeltaG(Decorator):
         Returns:
             :class:`~py_trees.common.Status`: the behaviour's new status :class:`~py_trees.common.Status`
         """
-        self.trace.append(self.decorated.status)
+        if self.decorated.status == common.Status.SUCCESS:
+            self.start_append = True
+
+        # Only append when you get success
+        if self.start_append:
+            self.trace.append(self.decorated.status)
+
+        if len(self.trace) < 1:
+            return self.decorated.status            
         for val in self.trace:
             if val != common.Status.SUCCESS:
                 return common.Status.FAILURE
@@ -173,47 +161,49 @@ def setup_nodes(nodes, i, trace):
     nodes[0].setup(0, 'a', trace[i])
     nodes[1].setup(0, 'a', trace[i])    
     nodes[2].setup(0, 'b', trace[i])    
+    nodes[3].setup(0, 'b', trace[i])        
 
 
-def skeleton():
-    main = Selector('R')
+def skeleton(trace):
+    main = Sequence('R')
 
     # Left sub-tree
     seqleft = Sequence('Left')
     goal1 = LTLNode('g1')
     goal11 = copy.copy(goal1)
     delta1 = Delta1(goal1)
-    seqleft.add_children([delta1, goal11])
+    goal2 = LTLNode('g2')    
+    goal22 = copy.copy(goal2)    
+    deltag = DeltaG(goal2)
+    seqleft.add_children([delta1, deltag])
     
     # Right sub-tree
-    seqright = Sequence('Right')    
-    delta2 = Delta2(seqright)
-    deltainv = Inverter(goal1)
-    goal2 = LTLNode('g2')
-    deltag = DeltaG(goal2)
-    seqright.add_children([deltainv, deltag])
+    seqright = Selector('Right')    
+    delta2 = Delta2(goal22)
+
+    seqright.add_children([delta2, goal11])
 
     # Main tree
     # main.add_children([seqleft, delta2])
-    main.add_children([delta2, seqleft])
+    main.add_children([seqleft, seqright])
 
     root = BehaviourTree(main)
     i = 0
-    trace = [
-        # {"a": True, "b": True}
-        {"a": True, "b": False},
-        # {"a": True, "b": False},
-        # {"a": True, "b": True},
-        # {"a": False, "b": False},
-        # {"a": False, "b": True},        
-    ]    
+    # trace = [
+    #     # {"a": True, "b": True}
+    #     # {"a": True, "b": False},
+    #     # {"a": True, "b": False},
+    #     # {"a": True, "b": True},
+    #     {"a": False, "b": False},
+    #     # {"a": False, "b": True},        
+    # ]    
 
-    py_trees.logging.level = py_trees.logging.Level.DEBUG
+    # py_trees.logging.level = py_trees.logging.Level.DEBUG
     output = py_trees.display.ascii_tree(root.root)
     print(output)
 
     for k in range(len(trace)):
-        setup_nodes([goal1, goal11, goal2], i, trace)
+        setup_nodes([goal1, goal11, goal2, goal22], i, trace)
         root.tick()
         print(root.root.status)
         i += 1
@@ -228,24 +218,24 @@ def ltl():
 
     # evaluate over finite traces
     t1 = [
-        # {"a": False, "b": False},
+        {"a": True, "b": False},
         {"a": True, "b": False},    
-        # {"a": True, "b": False},
-        # {"a": True, "b": True},
-        # {"a": False, "b": False},
+        {"a": False, "b": False},
+        {"a": True, "b": True},
+        # {"a": False, "b": True},
         # {"a": False, "b": True},                
     ]
     # assert parsed_formula.truth(t1, 0)
-    print(parsed_formula.truth(t1))
+    print('real LTL',parsed_formula.truth(t1))
 
     # from LTLf formula to DFA
     # dfa = parsed_formula.to_automaton()
     # assert dfa.accepts(t1)
-
+    skeleton(t1)
 
 
 def main():
-    skeleton()
+    # skeleton()
     ltl()
 
 if __name__ == '__main__':
