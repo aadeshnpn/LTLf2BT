@@ -208,7 +208,9 @@ def skeleton(trace):
     for k in range(len(trace)):
         setup_nodes([goal1, goal11, goal2, goal22], i, trace)
         root.tick()
+        # print(i, common.Status.SUCCESS)
         i += 1
+
     if root.root.status == common.Status.SUCCESS:
         return True
     else:
@@ -265,10 +267,11 @@ def ltl():
 
     # t1 = [
     #     {"a": True, "b": False},
-    #     {"a": True, "b": True},    
+    #     # {"a": False, "b": True},    
     # ]   
 
     for t in [t1, t2, t3, t4]:
+    # for t in [t1]:
         # assert parsed_formula.truth(t1, 0)
         # print('real LTL',parsed_formula.truth(t), end=" ")
 
@@ -276,23 +279,23 @@ def ltl():
         # dfa = parsed_formula.to_automaton()
         # assert dfa.accepts(t1)
         # skeleton(t)
-        if parsed_formula.truth(t) == skeleton(t):
-            pass
-        else:
-            print(parsed_formula.truth(t), skeleton(t), t)
+        # if parsed_formula.truth(t) == skeleton(t):
+        print(t, parsed_formula.truth(t), skeleton(t))
+        # else:
+        #     print(parsed_formula.truth(t), skeleton(t), t)
 
-    for t in t5:
-        #     # assert parsed_formula.truth(t1, 0)
-        #     print('real LTL',parsed_formula.truth(t), end=" ")
+    # for t in t5:
+    #     #     # assert parsed_formula.truth(t1, 0)
+    #     #     print('real LTL',parsed_formula.truth(t), end=" ")
 
-        #     # from LTLf formula to DFA
-        #     # dfa = parsed_formula.to_automaton()
-        #     # assert dfa.accepts(t1)
-        #     skeleton(t)        
-        if parsed_formula.truth(t) == skeleton(t):
-            pass
-        else:
-            print(parsed_formula.truth(t), skeleton(t), t)    
+    #     #     # from LTLf formula to DFA
+    #     #     # dfa = parsed_formula.to_automaton()
+    #     #     # assert dfa.accepts(t1)
+    #     #     skeleton(t)        
+    #     if parsed_formula.truth(t) == skeleton(t):
+    #         pass
+    #     else:
+    #         print(parsed_formula.truth(t), skeleton(t), t)    
 
 
 def main():
