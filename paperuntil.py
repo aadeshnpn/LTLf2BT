@@ -156,7 +156,7 @@ def skeleton(trace):
         # BT control flow/ tick
         root.tick()
         # Output from both the LTLf parser and BT 
-        print(i, parsed_formula.truth(trace), root.root.status)
+        print(i, parsed_formula.truth(trace, k), root.root.status)
         # Increase the time step
         i += 1
 

@@ -49,6 +49,37 @@ class Delta1(Decorator):
         return return_status
 
 
+class Delta3(Decorator):
+    """
+    A decorator for the left sub-tree. 
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child (:class:`~py_trees.behaviour.Behaviour`): behaviour to time
+            name (:obj:`str`): the decorator name
+        """
+        super(Delta3, self).__init__(name=name, child=child)
+        self.is_true_yet = False
+
+    def update(self):
+        return_status = None
+
+        if not self.is_true_yet:
+            # return_status = self.last_time_step
+            if self.decorated.status == common.Status.SUCCESS:
+                self.is_true_yet = True                
+                return_status = common.Status.SUCCESS
+            elif self.decorated.status == common.Status.FAILURE:
+                return_status = common.Status.FAILURE
+        else:
+            return_status = common.Status.SUCCESS
+
+        return return_status
+
+
 class Delta2(Decorator):
     """
     A decorator for the left sub-tree. 
@@ -166,7 +197,60 @@ def setup_nodes(nodes, i, trace):
     nodes[3].setup(0, 'b', trace[i])        
 
 
-def skeleton(trace):
+def newuntil(trace):
+    main = Sequence('R')
+
+    # Left sub-tree
+    seleleft = Selector('Left')
+    goal1 = LTLNode('g1')
+    goal11 = copy.copy(goal1)
+    delta1 = Delta1(goal1)
+    delta11 = copy.copy(Delta1(goal11))
+    goal2 = LTLNode('g2')    
+    goal22 = copy.copy(goal2)    
+    deltag = DeltaG(goal2)
+    seleleft.add_children([delta1, deltag])
+    
+    # Right sub-tree
+    seqright = Sequence('Right')    
+    delta2 = Delta2(goal22)
+
+    seqright.add_children([delta2])
+
+    # Main tree
+    # main.add_children([seqleft, delta2])
+    main.add_children([seleleft, seqright])
+
+    top = Delta3(main)
+    root = BehaviourTree(top)
+    i = 0
+
+    # Creating a LTLf parser object
+    parser = LTLfParser()
+    # Until goal specification
+    formula = "(a U b)"
+    # Parsed formula
+    parsed_formula = parser(formula)
+
+    # py_trees.logging.level = py_trees.logging.Level.DEBUG
+    output = py_trees.display.ascii_tree(root.root)
+    # print(output)
+
+    for k in range(len(trace)):
+        setup_nodes([goal1, goal11, goal2, goal22], i, trace)
+        root.tick()
+        # print(i, common.Status.SUCCESS)
+        print(i, parsed_formula.truth(trace, k), root.root.status)        
+        i += 1
+
+    # if root.root.status == common.Status.SUCCESS:
+    #     return True
+    # else:
+    #     return False
+    # print(root.root.status)
+
+
+def olduntil(trace):
     main = Sequence('R')
 
     # Left sub-tree
@@ -192,15 +276,6 @@ def skeleton(trace):
 
     root = BehaviourTree(main)
     i = 0
-    # trace = [
-    #     # {"a": True, "b": True}
-    #     # {"a": True, "b": False},
-    #     # {"a": True, "b": False},
-    #     # {"a": True, "b": True},
-    #     {"a": False, "b": False},
-    #     # {"a": False, "b": True},        
-    # ]    
-    
     # Creating a LTLf parser object
     parser = LTLfParser()
     # Until goal specification
@@ -219,15 +294,7 @@ def skeleton(trace):
         print(i, parsed_formula.truth(trace), root.root.status)        
         i += 1
 
-    # if root.root.status == common.Status.SUCCESS:
-    #     return True
-    # else:
-    #     return False
-    # print(root.root.status)
-
-
-
-def main():
+def main(fn):
     t1 = [{
         'a': False, 'b': False
     }]
@@ -249,7 +316,7 @@ def main():
         # Call the skeleton function that implements a minimal BT
         # for Until-sub tree based on the Figure from Dr.Goodrich
         # paper draft
-        skeleton(t)
+        fn(t)
         print('------')
 
     t5 = [ 
@@ -272,10 +339,12 @@ def main():
          ]
     for t in t5:
         print('Trace', t)
-        skeleton(t)
+        fn(t)
         print('------')         
 
 
-
 if __name__ == '__main__':
-    main()
+    # For old unitl 
+    # main(olduntil)
+    # For new until    
+    main(newuntil)
