@@ -28,6 +28,30 @@ def execute_bt(bt, trace, nodes):
     return bt.root.status
 
 
+
+# Execute both BT and Ltlf with same traces for comparision
+def execute_both_bt_ltlf(subtree, formula, trace, nodes, verbos=True):
+    # Args:
+        # Which BT class to use
+        # LTL formual
+        # Trace of lenght m
+        # BT exeuction nodes which require trace input
+    # Trace of length 1
+
+    # Create a BT from the subtree
+    root = BehaviourTree(subtree)    
+    
+    # Creating a LTLf parser object
+    parser = LTLfParser()
+    # Parsed formula
+    parsed_formula = parser(formula)
+    bt_status = execute_bt(root, trace, nodes)
+    ltlf_status = parsed_formula.truth(trace)
+    if verbos:
+        print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(trace, bt_status, ltlf_status))
+    return bt_status, ltlf_status
+
+
 class PropConditionNode(Behaviour):
     """Condition node for the atomic propositions.
 
@@ -71,7 +95,7 @@ class PropConditionNode(Behaviour):
             return common.Status.FAILURE
 
 
-def proposition2condition():
+def proposition2condition(verbos=True):
     # Trace of length 1
     trace1 = [
         {'a': False}
@@ -87,22 +111,19 @@ def proposition2condition():
         {'a': True}        
     ]    
 
-    # Create condition node that is semantically equivalent 
-    # to atomic proposition
-    cnode = PropConditionNode('a')
-    root = BehaviourTree(cnode)    
-    
-    # Creating a LTLf parser object
-    parser = LTLfParser()
-    # Until goal specification
-    formula = "a"
-    # Parsed formula
-    parsed_formula = parser(formula)
     expno = 1
+    # It is important to create a new execution object for each trace
+    # as BT are state machine. 
     for trace in [trace1, trace2, trace3]:
-        bt_status = execute_bt(root, trace, [cnode])
-        ltlf_status = parsed_formula.truth(trace)
-        print("experiment no: {}, trace: {}', 'BT status: {}', 'LTLf status: {}".format(expno, trace, bt_status, ltlf_status))
+        # Create condition node that is semantically equivalent 
+        # to atomic proposition
+        cnode = PropConditionNode('a')
+        if verbos:
+            print('--------------')
+            print('Experiment no: ', expno)
+        execute_both_bt_ltlf(cnode, 'a', trace, [cnode], verbos)
+        if verbos:
+            print('=============')        
         expno += 1
 
 
