@@ -51,7 +51,10 @@ def execute_both_bt_ltlf(subtree, formula, trace, nodes, verbos=True):
         print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(trace, bt_status, ltlf_status))
     return bt_status, ltlf_status
 
+##  Start of BT sub-tree that implement the LTLf operators
 
+
+# Just a simple condition node that implements atomic propositions
 class PropConditionNode(Behaviour):
     """Condition node for the atomic propositions.
 
@@ -95,6 +98,43 @@ class PropConditionNode(Behaviour):
             return common.Status.FAILURE
 
 
+# Just a simple condition node that implements atomic propositions
+class Negation(Decorator):
+    """Decorator node for the negation of an atomic proposition.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the negation of an atomic LTLf propositions.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Negation, self).__init__(name=name, child=child)
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the inverted status
+        """        
+        # if the proposition value is true
+        ## return Failure
+        # else
+        ## return Success
+
+        # This give access to the child class of decorator class
+        if  self.decorated.status == common.Status.FAILURE:
+            return common.Status.SUCCESS
+        elif self.decorated.status == common.Status.SUCCESS:
+            return common.Status.FAILURE
+
+
+## Experiments to test each LTLf operator and its BT sub-tree
+
+# Experiment 1 for simple atomic propositions
 def proposition2condition(verbos=True):
     # Trace of length 1
     trace1 = [
@@ -121,7 +161,42 @@ def proposition2condition(verbos=True):
         if verbos:
             print('--------------')
             print('Experiment no: ', expno)
+        # Call the excute function that will execute both BT and LTLf
         execute_both_bt_ltlf(cnode, 'a', trace, [cnode], verbos)
+        if verbos:
+            print('=============')        
+        expno += 1
+
+# Experiment 2 for simple atomic propositions
+def negation2decorator(verbos=True):
+    # Trace of length 1
+    trace1 = [
+        {'a': False}
+    ]
+    # Trace of length 1    
+    trace2 = [
+        {'a': True}
+    ]    
+    # Trace of length 3
+    trace3 = [
+        {'a': True},
+        {'a': False},        
+        {'a': True}        
+    ]    
+
+    expno = 1
+    # It is important to create a new execution object for each trace
+    # as BT are state machine. 
+    for trace in [trace1, trace2, trace3]:
+        # Create condition node that is semantically equivalent 
+        # to atomic proposition
+        cnode = PropConditionNode('a')
+        ndecorator = Negation(cnode, 'Invert')
+        if verbos:
+            print('--------------')
+            print('Experiment no: ', expno)
+        # Call the excute function that will execute both BT and LTLf
+        execute_both_bt_ltlf(ndecorator, '!a', trace, [cnode], verbos)
         if verbos:
             print('=============')        
         expno += 1
@@ -131,7 +206,7 @@ def main(args):
     if args.test == 'P':
         proposition2condition()
     elif args.test == '~':
-        pass
+        negation2decorator()
     elif args.test == '&':
         pass    
     elif args.test == 'X':
