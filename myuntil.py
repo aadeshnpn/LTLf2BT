@@ -291,7 +291,7 @@ def olduntil(trace):
         setup_nodes([goal1, goal11, goal2, goal22], i, trace)
         root.tick()
         # print(i, common.Status.SUCCESS)
-        print(i, parsed_formula.truth(trace), root.root.status)        
+        print(i, parsed_formula.truth(trace, k), root.root.status)        
         i += 1
 
 def main(fn):
