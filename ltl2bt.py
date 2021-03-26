@@ -51,6 +51,16 @@ def execute_both_bt_ltlf(subtree, formula, trace, nodes, verbos=True):
         print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(trace, bt_status, ltlf_status))
     return bt_status, ltlf_status
 
+
+# Function that compares retsults between LTLf and BT
+def count_bt_ltlf_return_values(returnvalues):
+    count = 0
+    for value in returnvalues:
+        if (value[0] == common.Status.SUCCESS and value[1] is True):
+            count += 1
+        elif (value[0] == common.Status.FAILURE and value[1] is False):
+            count += 1
+    return count
 ##  Start of BT sub-tree that implement the LTLf operators
 
 
@@ -134,6 +144,7 @@ class Negation(Decorator):
 
 ## Experiments to test each LTLf operator and its BT sub-tree
 
+
 # Experiment 1 for simple atomic propositions
 def proposition2condition(verbos=True):
     # Trace of length 1
@@ -150,8 +161,9 @@ def proposition2condition(verbos=True):
         {'a': False},        
         {'a': True}        
     ]    
-
-    expno = 1
+    # Experiment variables
+    expno = 0
+    returnvalueslist = []
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
     for trace in [trace1, trace2, trace3]:
@@ -162,12 +174,14 @@ def proposition2condition(verbos=True):
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
-        execute_both_bt_ltlf(cnode, 'a', trace, [cnode], verbos)
+        returnvalueslist.append(execute_both_bt_ltlf(cnode, 'a', trace, [cnode], verbos))
         if verbos:
             print('=============')        
         expno += 1
+    count = count_bt_ltlf_return_values(returnvalueslist)
+    print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
 
-# Experiment 2 for simple atomic propositions
+# Experiment 2 for simple negation of atomic propositions
 def negation2decorator(verbos=True):
     # Trace of length 1
     trace1 = [
@@ -184,22 +198,76 @@ def negation2decorator(verbos=True):
         {'a': True}        
     ]    
 
-    expno = 1
+    expno = 0
+    returnvalueslist = []
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
     for trace in [trace1, trace2, trace3]:
-        # Create condition node that is semantically equivalent 
-        # to atomic proposition
+        # Create a bt sub-tree that is semantically equivalent to
+        # Negation LTLf operator
         cnode = PropConditionNode('a')
         ndecorator = Negation(cnode, 'Invert')
         if verbos:
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
-        execute_both_bt_ltlf(ndecorator, '!a', trace, [cnode], verbos)
+        returnvalueslist.append(execute_both_bt_ltlf(ndecorator, '!a', trace, [cnode], verbos))
         if verbos:
             print('=============')        
         expno += 1
+    count = count_bt_ltlf_return_values(returnvalueslist)
+    print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
+
+
+
+# Experiment 3 for simple and of atomic propositions
+def and2sequence(verbos=True):
+    # Trace of length 1
+    trace1 = [
+        {'a': False, 'b': False}
+    ]
+    # Trace of length 1    
+    trace2 = [
+        {'a': False, 'b': True}        
+    ]    
+    # Trace of length 1
+    trace3 = [
+        {'a': True, 'b': False}                
+    ]    
+    # Trace of length 1
+    trace4 = [
+        {'a': True, 'b': True}                
+    ]        
+    # Trace of length 3
+    trace5 = [
+        {'a': True, 'b': True},                
+        {'a': False, 'b': False},                        
+        {'a': True, 'b': True}                        
+    ]        
+    # Experiment variables
+    expno = 0
+    returnvalueslist = []
+    # It is important to create a new execution object for each trace
+    # as BT are state machine. 
+    for trace in [trace1, trace2, trace3, trace4, trace5]:
+        # Create BT-sub tree that is semantically equivalent 
+        # to And LTLf operator
+        # And sub-tree
+        cnode1 = PropConditionNode('a')
+        cnode2 = PropConditionNode('b')        
+        sequence = Sequence('And')
+
+        sequence.add_children([cnode1, cnode2])
+        if verbos:
+            print('--------------')
+            print('Experiment no: ', expno)
+        # Call the excute function that will execute both BT and LTLf
+        returnvalueslist.append(execute_both_bt_ltlf(sequence, 'a & b', trace, [cnode1, cnode2], verbos))
+        if verbos:
+            print('=============')        
+        expno += 1
+    count = count_bt_ltlf_return_values(returnvalueslist)
+    print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
 
 
 def main(args):
@@ -208,7 +276,7 @@ def main(args):
     elif args.test == '~':
         negation2decorator()
     elif args.test == '&':
-        pass    
+        and2sequence()
     elif args.test == 'X':
         pass    
     elif args.test == 'U':
