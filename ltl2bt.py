@@ -251,6 +251,71 @@ class Finally(Decorator):
             elif self.decorated.status == common.Status.FAILURE:
                 return common.Status.FAILURE      
 
+## Until operator
+
+# Right sub-tree Decorator for the until node
+class DeltaU(Decorator):
+    """Decorator node for the Until operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements a decorator for Until operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(DeltaU, self).__init__(name=name, child=child)
+        self.indx = 0
+        self.previous_value = common.Status.SUCCESS
+        self.previous_previous_value = common.Status.SUCCESS
+        self.always_failure = False
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Globally operator status
+        """        
+        # For until operator \psi_2 needs to be True at some point and
+        # when \psi_2 is finally true, all previous \psi_1 needs to be true
+
+        ## So the logic for the decorator node is to handle 
+        # edges cases with trace lenght 1 and 2. This decorator node has three memory units
+        # : first: to track \psi_1 previous value 
+        # : second: to tracke \psi_1 previous previous value
+        # : third: to remeber if \psi_1 every has been Failure before
+
+        # Handels For trace lenght 1
+        if self.indx == 0:
+            self.beginning = False
+            return_value = common.Status.SUCCESS
+            self.previous_value = self.decorated.status
+        # Handel for trace lenght 2
+        elif self.indx == 1:
+            if (self.previous_value == common.Status.SUCCESS and self.previous_previous_value == common.Status.SUCCESS):
+                return_value = common.Status.SUCCESS
+            else:
+                return_value = common.Status.FAILURE
+            self.previous_previous_value = self.previous_value                
+            self.previous_value = self.decorated.status
+        # Handel for any other trace lenght
+        else:
+            if self.always_failure:
+                return_value = common.Status.FAILURE                
+            elif (self.previous_value == common.Status.FAILURE or self.previous_previous_value == common.Status.FAILURE):
+                self.always_failure = True
+                return_value = common.Status.FAILURE                                
+            elif (self.previous_value == common.Status.SUCCESS and self.previous_previous_value == common.Status.SUCCESS):
+                return_value = common.Status.SUCCESS
+            self.previous_previous_value = self.previous_value
+            self.previous_value = self.decorated.status
+        self.indx +=1        
+        return return_value
+
+
 
 ## Experiments to test each LTLf operator and its BT sub-tree
 
@@ -510,7 +575,7 @@ def finally2decorator(verbos=True):
     # as BT are state machine. 
     for trace in [trace1, trace2, trace3, trace4, trace5]:
         # Create a bt sub-tree that is semantically equivalent to
-        # Globally LTLf operator
+        # Finally LTLf operator
         cnode = PropConditionNode('a')
         gdecorator = Finally(cnode, 'Finally')
         if verbos:
@@ -525,6 +590,90 @@ def finally2decorator(verbos=True):
     print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
 
 
+# Experiment 5 for Globally operator
+def until2subtree(verbos=True):
+    # Trace of length 1
+    t1 = [
+        {'a': False, 'b': False}
+    ]
+    # Trace of length 1    
+    t2 = [
+        {'a': False, 'b': True}        
+    ]    
+    # Trace of length 1
+    t3 = [
+        {'a': True, 'b': False}                
+    ]    
+    # Trace of length 1
+    t4 = [
+        {'a': True, 'b': True}                
+    ]        
+    # Trace of length 3
+
+
+    expno = 0
+    returnvalueslist = []
+    # It is important to create a new execution object for each trace
+    # as BT are state machine. 
+    for trace in [t1, t2, t3, t4]:
+        # Create a bt sub-tree that is semantically equivalent to
+        # Until sub-tree
+        seqleft = Sequence('main')
+        goal1 = PropConditionNode('a')
+        goal2 = PropConditionNode('b')    
+        deltau = DeltaU(goal1)
+        seqleft.add_children([deltau, goal2])        
+        top = Finally(seqleft)        
+
+        if verbos:
+            print('--------------')
+            print('Experiment no: ', expno)
+        # Call the excute function that will execute both BT and LTLf
+        returnvalueslist.append(execute_both_bt_ltlf(top, 'a U b', trace, [goal1, goal2], verbos))
+        if verbos:
+            print('=============')        
+        expno += 1
+
+    t5 = [ 
+         [t1[0], t1[0]],
+         [t1[0], t2[0]],   
+         [t1[0], t3[0]],        
+         [t1[0], t4[0]],
+         [t2[0], t1[0]],
+         [t2[0], t2[0]],   
+         [t2[0], t3[0]],        
+         [t2[0], t4[0]],
+         [t3[0], t1[0]],
+         [t3[0], t2[0]],   
+         [t3[0], t3[0]],        
+         [t3[0], t4[0]],
+         [t4[0], t1[0]],
+         [t4[0], t2[0]],   
+         [t4[0], t3[0]],        
+         [t4[0], t4[0]]
+         ] 
+
+    for trace in t5:
+        # Create a bt sub-tree that is semantically equivalent to
+        # Until sub-tree
+        seqleft = Sequence('main')
+        goal1 = PropConditionNode('a')
+        goal2 = PropConditionNode('b')    
+        deltau = DeltaU(goal1)
+        seqleft.add_children([deltau, goal2])        
+        top = Finally(seqleft)        
+
+        if verbos:
+            print('--------------')
+            print('Experiment no: ', expno)
+        # Call the excute function that will execute both BT and LTLf
+        returnvalueslist.append(execute_both_bt_ltlf(top, 'a U b', trace, [goal1, goal2], verbos))
+        if verbos:
+            print('=============')        
+        expno += 1    
+    count = count_bt_ltlf_return_values(returnvalueslist)
+    print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
+
 
 def main(args):
     if args.test == 'P':
@@ -536,7 +685,7 @@ def main(args):
     elif args.test == 'X':
         next2decorator()
     elif args.test == 'U':
-        pass    
+        until2subtree()
     elif args.test == 'G':
         globally2decorator()
     elif args.test == 'F':
