@@ -779,5 +779,43 @@ if __name__ == '__main__':
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
     parser.add_argument('--no_trace_2_test', type=int, default=16)        
+
+    ## Usages
+
+    # Atomic proposition 
+    ## python ltl2bt.py --test 'P' 
+
+    # Negation 
+    ## python ltl2bt.py --test '~'     
+
+    # And 
+    ## python ltl2bt.py --test '&'     
+
+    # Next 
+    ## python ltl2bt.py --test 'X'        
+
+    # Globally 
+    ## python ltl2bt.py --test 'G'            
+
+    # Finally 
+    ## python ltl2bt.py --test 'F'                
+
+    # Until sub-tree
+    # to run until expeirments with pre-defined traces: 
+    ## python ltl2bt.py --test 'U'
+
+    # to run until expeirments with random length trace: 
+    ## python ltl2bt.py --test 'U' --trace 'random' --max_trace_len 0
+
+    # to run until expeirments with 10 length trace: 
+    ## python ltl2bt.py --test 'U' --trace 'random' --max_trace_len 10
+
+    # to run until expeirments with 10 length trace and 50 different traces: 
+    ## python ltl2bt.py --test 'U' --trace 'random' --max_trace_len 10 --no_trace_2_test 50
+
+    ### These aruguments (random, max_trace_len, no_trace_2_test) is equally
+    ### valid for (Next, Globally, Finally) operator as well
     args = parser.parse_args()
+
+
     main(args)
