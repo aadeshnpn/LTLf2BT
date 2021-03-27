@@ -8,6 +8,44 @@ import py_trees
 from py_trees import common
 import copy
 import argparse
+import numpy as np
+
+
+# Method to randomly create traces
+def getrandomtrace(n=2, maxtracelen=0):
+    t1 = [{
+        'a': False, 'b': False
+    }]
+    t2 = [{
+        'a': False, 'b': True
+    }]
+    t3 = [{
+        'a': True, 'b': False
+    }]
+    t4 = [{
+        'a': True, 'b': True
+    }]  
+    tracelist = []
+    def gettraces():
+        if maxtracelen == 0:
+            m = np.random.randint(1, 50)
+        else:
+            m = maxtracelen
+        choices = {
+            0: t1[0],
+            1: t2[0],
+            2: t3[0],
+            3: t4[0]
+        }
+        trace = []
+        for i in range(m):
+            j = np.random.choice([0,1,2,3], m)
+            trace.append(choices[j[i]])
+        return trace    
+    for k in range(n):
+        tracelist.append(gettraces())
+
+    return tracelist
 
 
 # Method that calls the BT execution node setup method
@@ -447,32 +485,36 @@ def and2sequence(verbos=True):
 
 
 # Experiment 4 for Next operator
-def next2decorator(verbos=True):
-    # Trace of length 1
-    trace1 = [
-        {'a': False}
-    ]
-    # Trace of length 1    
-    trace2 = [
-        {'a': True}
-    ]    
-    # Trace of length 2
-    trace3 = [
-        {'a': False},
-        {'a': True},        
-    ]    
-    # Trace of length 3
-    trace4 = [
-        {'a': False},
-        {'a': True},        
-        {'a': False}        
-    ]        
+def next2decorator(args, verbos=True):
+    if args.trace == 'fixed':
+        # Trace of length 1
+        trace1 = [
+            {'a': False}
+        ]
+        # Trace of length 1    
+        trace2 = [
+            {'a': True}
+        ]    
+        # Trace of length 2
+        trace3 = [
+            {'a': False},
+            {'a': True},        
+        ]    
+        # Trace of length 3
+        trace4 = [
+            {'a': False},
+            {'a': True},        
+            {'a': False}        
+        ]        
+        traces = [trace1, trace2, trace3, trace4]
+    else:
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
 
     expno = 0
     returnvalueslist = []
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
-    for trace in [trace1, trace2, trace3, trace4]:
+    for trace in traces:
         # Create a bt sub-tree that is semantically equivalent to
         # Next LTLf operator
         cnode = PropConditionNode('a')
@@ -491,39 +533,42 @@ def next2decorator(verbos=True):
 
 
 # Experiment 5 for Globally operator
-def globally2decorator(verbos=True):
-    # Trace of length 1
-    trace1 = [
-        {'a': False}
-    ]
-    # Trace of length 1    
-    trace2 = [
-        {'a': True}
-    ]    
-    # Trace of length 2
-    trace3 = [
-        {'a': False},
-        {'a': True},        
-    ]    
-    # Trace of length 3
-    trace4 = [
-        {'a': False},
-        {'a': True},        
-        {'a': False}        
-    ]   
+def globally2decorator(args, verbos=True):
+    if args.trace == 'fixed':
+        # Trace of length 1
+        trace1 = [
+            {'a': False}
+        ]
+        # Trace of length 1    
+        trace2 = [
+            {'a': True}
+        ]    
+        # Trace of length 2
+        trace3 = [
+            {'a': False},
+            {'a': True},        
+        ]    
+        # Trace of length 3
+        trace4 = [
+            {'a': False},
+            {'a': True},        
+            {'a': False}        
+        ]   
 
-    # Trace of length 4
-    trace5 = [
-        {'a': True},
-        {'a': True},        
-        {'a': True}        
-    ]            
-
+        # Trace of length 4
+        trace5 = [
+            {'a': True},
+            {'a': True},        
+            {'a': True}        
+        ]            
+        traces = [trace1, trace2, trace3, trace4, trace5]
+    else:
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
     expno = 0
     returnvalueslist = []
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
-    for trace in [trace1, trace2, trace3, trace4, trace5]:
+    for trace in traces:
         # Create a bt sub-tree that is semantically equivalent to
         # Globally LTLf operator
         cnode = PropConditionNode('a')
@@ -541,39 +586,42 @@ def globally2decorator(verbos=True):
 
 
 # Experiment 5 for Globally operator
-def finally2decorator(verbos=True):
-    # Trace of length 1
-    trace1 = [
-        {'a': False}
-    ]
-    # Trace of length 1    
-    trace2 = [
-        {'a': True}
-    ]    
-    # Trace of length 2
-    trace3 = [
-        {'a': False},
-        {'a': True},        
-    ]    
-    # Trace of length 3
-    trace4 = [
-        {'a': False},
-        {'a': True},        
-        {'a': False}        
-    ]   
+def finally2decorator(args, verbos=True):
+    if args.trace == 'fixed':
+        # Trace of length 1
+        trace1 = [
+            {'a': False}
+        ]
+        # Trace of length 1    
+        trace2 = [
+            {'a': True}
+        ]    
+        # Trace of length 2
+        trace3 = [
+            {'a': False},
+            {'a': True},        
+        ]    
+        # Trace of length 3
+        trace4 = [
+            {'a': False},
+            {'a': True},        
+            {'a': False}        
+        ]   
 
-    # Trace of length 4
-    trace5 = [
-        {'a': False},
-        {'a': False},        
-        {'a': False}        
-    ]            
-
+        # Trace of length 4
+        trace5 = [
+            {'a': False},
+            {'a': False},        
+            {'a': False}        
+        ]            
+        traces = [trace1, trace2, trace3, trace4, trace5]
+    else:
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
     expno = 0
     returnvalueslist = []
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
-    for trace in [trace1, trace2, trace3, trace4, trace5]:
+    for trace in traces:
         # Create a bt sub-tree that is semantically equivalent to
         # Finally LTLf operator
         cnode = PropConditionNode('a')
@@ -590,32 +638,34 @@ def finally2decorator(verbos=True):
     print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
 
 
-# Experiment 5 for Globally operator
-def until2subtree(verbos=True):
-    # Trace of length 1
-    t1 = [
-        {'a': False, 'b': False}
-    ]
-    # Trace of length 1    
-    t2 = [
-        {'a': False, 'b': True}        
-    ]    
-    # Trace of length 1
-    t3 = [
-        {'a': True, 'b': False}                
-    ]    
-    # Trace of length 1
-    t4 = [
-        {'a': True, 'b': True}                
-    ]        
-    # Trace of length 3
-
-
+# Experiment 6 for Until operator
+def until2subtree(args, verbos=True):
+    if args.trace == 'fixed':
+        # Trace of length 1
+        t1 = [
+            {'a': False, 'b': False}
+        ]
+        # Trace of length 1    
+        t2 = [
+            {'a': False, 'b': True}        
+        ]    
+        # Trace of length 1
+        t3 = [
+            {'a': True, 'b': False}                
+        ]    
+        # Trace of length 1
+        t4 = [
+            {'a': True, 'b': True}                
+        ]        
+        # Trace of length 3
+        traces = [t1, t2, t3, t4]
+    else:
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
     expno = 0
     returnvalueslist = []
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
-    for trace in [t1, t2, t3, t4]:
+    for trace in traces:
         # Create a bt sub-tree that is semantically equivalent to
         # Until sub-tree
         seqleft = Sequence('main')
@@ -634,26 +684,55 @@ def until2subtree(verbos=True):
             print('=============')        
         expno += 1
 
-    t5 = [ 
-         [t1[0], t1[0]],
-         [t1[0], t2[0]],   
-         [t1[0], t3[0]],        
-         [t1[0], t4[0]],
-         [t2[0], t1[0]],
-         [t2[0], t2[0]],   
-         [t2[0], t3[0]],        
-         [t2[0], t4[0]],
-         [t3[0], t1[0]],
-         [t3[0], t2[0]],   
-         [t3[0], t3[0]],        
-         [t3[0], t4[0]],
-         [t4[0], t1[0]],
-         [t4[0], t2[0]],   
-         [t4[0], t3[0]],        
-         [t4[0], t4[0]]
-         ] 
+    # t5 = [ 
+    #      [t1[0], t1[0]],
+    #      [t1[0], t2[0]],   
+    #      [t1[0], t3[0]],        
+    #      [t1[0], t4[0]],
+    #      [t2[0], t1[0]],
+    #      [t2[0], t2[0]],   
+    #      [t2[0], t3[0]],        
+    #      [t2[0], t4[0]],
+    #      [t3[0], t1[0]],
+    #      [t3[0], t2[0]],   
+    #      [t3[0], t3[0]],        
+    #      [t3[0], t4[0]],
+    #      [t4[0], t1[0]],
+    #      [t4[0], t2[0]],   
+    #      [t4[0], t3[0]],        
+    #      [t4[0], t4[0]]
+    #      ] 
 
-    for trace in t5:
+    # for trace in t5:
+    #     # Create a bt sub-tree that is semantically equivalent to
+    #     # Until sub-tree
+    #     seqleft = Sequence('main')
+    #     goal1 = PropConditionNode('a')
+    #     goal2 = PropConditionNode('b')    
+    #     deltau = DeltaU(goal1)
+    #     seqleft.add_children([deltau, goal2])        
+    #     top = Finally(seqleft)        
+
+    #     if verbos:
+    #         print('--------------')
+    #         print('Experiment no: ', expno)
+    #     # Call the excute function that will execute both BT and LTLf
+    #     returnvalueslist.append(execute_both_bt_ltlf(top, 'a U b', trace, [goal1, goal2], verbos))
+    #     if verbos:
+    #         print('=============')        
+    #     expno += 1    
+    count = count_bt_ltlf_return_values(returnvalueslist)
+    print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
+
+
+# Experiment 7 for until operator with random traces
+def until2subtree_randomtrace(verbos=True):
+    expno = 0
+    returnvalueslist = []
+    tracelist = getrandomtrace()
+    # It is important to create a new execution object for each trace
+    # as BT are state machine. 
+    for trace in tracelist:
         # Create a bt sub-tree that is semantically equivalent to
         # Until sub-tree
         seqleft = Sequence('main')
@@ -670,7 +749,7 @@ def until2subtree(verbos=True):
         returnvalueslist.append(execute_both_bt_ltlf(top, 'a U b', trace, [goal1, goal2], verbos))
         if verbos:
             print('=============')        
-        expno += 1    
+        expno += 1
     count = count_bt_ltlf_return_values(returnvalueslist)
     print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
 
@@ -683,19 +762,22 @@ def main(args):
     elif args.test == '&':
         and2sequence()
     elif args.test == 'X':
-        next2decorator()
+        next2decorator(args)
     elif args.test == 'U':
-        until2subtree()
+        until2subtree(args)
     elif args.test == 'G':
-        globally2decorator()
+        globally2decorator(args)
     elif args.test == 'F':
-        finally2decorator()
-    elif args.test == 'ALL':
-        pass    
+        finally2decorator(args)
+    elif args.test == 'U_random':
+        until2subtree_randomtrace(args)
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test', type=str, choices = ['P', '~', '&', 'X', 'U', 'G', 'F', 'ALL'])
+    parser.add_argument('--test', type=str, choices = ['P', '~', '&', 'X', 'U', 'G', 'F', 'U_random'])
+    parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
+    parser.add_argument('--max_trace_len', type=int, default=3)    
+    parser.add_argument('--no_trace_2_test', type=int, default=16)        
     args = parser.parse_args()
     main(args)
