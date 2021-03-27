@@ -142,6 +142,44 @@ class Negation(Decorator):
             return common.Status.FAILURE
 
 
+# Just a simple condition node that implements atomic propositions
+class Next(Decorator):
+    """Decorator node for the Next operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Next LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Next, self).__init__(name=name, child=child)
+        self.idx = 0
+        self.next_status = None
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Next operator status
+        """        
+        # At index i, return Failure
+        # At index i+1, return self.decorated
+        if self.idx == 0:
+            self.next_status = common.Status.FAILURE
+        elif self.idx == 1:
+            # This give access to the child class of decorator class
+            if self.decorated.status == common.Status.SUCCESS:
+                self.next_status = common.Status.SUCCESS
+            elif self.decorated.status == common.Status.FAILURE:
+                self.next_status = common.Status.FAILURE
+        self.idx += 1
+        return self.next_status
+
+
 ## Experiments to test each LTLf operator and its BT sub-tree
 
 
@@ -180,6 +218,7 @@ def proposition2condition(verbos=True):
         expno += 1
     count = count_bt_ltlf_return_values(returnvalueslist)
     print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
+
 
 # Experiment 2 for simple negation of atomic propositions
 def negation2decorator(verbos=True):
@@ -270,6 +309,50 @@ def and2sequence(verbos=True):
     print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
 
 
+# Experiment 4 for Next operator
+def next2decorator(verbos=True):
+    # Trace of length 1
+    trace1 = [
+        {'a': False}
+    ]
+    # Trace of length 1    
+    trace2 = [
+        {'a': True}
+    ]    
+    # Trace of length 2
+    trace3 = [
+        {'a': False},
+        {'a': True},        
+    ]    
+    # Trace of length 3
+    trace4 = [
+        {'a': False},
+        {'a': True},        
+        {'a': False}        
+    ]        
+
+    expno = 0
+    returnvalueslist = []
+    # It is important to create a new execution object for each trace
+    # as BT are state machine. 
+    for trace in [trace1, trace2, trace3, trace4]:
+        # Create a bt sub-tree that is semantically equivalent to
+        # Next LTLf operator
+        cnode = PropConditionNode('a')
+        ndecorator = Next(cnode, 'Next')
+        if verbos:
+            print('--------------')
+            print('Experiment no: ', expno)
+        # Call the excute function that will execute both BT and LTLf
+        returnvalueslist.append(execute_both_bt_ltlf(ndecorator, 'X a', trace, [cnode], verbos))
+        if verbos:
+            print('=============')        
+        expno += 1
+    count = count_bt_ltlf_return_values(returnvalueslist)
+    print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
+
+
+
 def main(args):
     if args.test == 'P':
         proposition2condition()
@@ -278,7 +361,7 @@ def main(args):
     elif args.test == '&':
         and2sequence()
     elif args.test == 'X':
-        pass    
+        next2decorator()
     elif args.test == 'U':
         pass    
     elif args.test == 'G':
