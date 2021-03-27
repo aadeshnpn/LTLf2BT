@@ -216,6 +216,42 @@ class Globally(Decorator):
                 return common.Status.FAILURE      
 
 
+# Just a simple condition node that implements Finally LTLf operator
+class Finally(Decorator):
+    """Decorator node for the Finally operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Finally LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Finally, self).__init__(name=name, child=child)
+        self.found_success = False
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Globally operator status
+        """        
+        # For finally the atomic proposition needs to hold for 
+        # just a state. So if we find one success then Finally returns Success
+        # This give access to the child class of decorator class
+        if self.found_success:
+            return common.Status.SUCCESS
+        else:
+            if self.decorated.status == common.Status.SUCCESS:
+                self.found_success = True                
+                return common.Status.SUCCESS
+            elif self.decorated.status == common.Status.FAILURE:
+                return common.Status.FAILURE      
+
+
 ## Experiments to test each LTLf operator and its BT sub-tree
 
 
@@ -389,7 +425,6 @@ def next2decorator(verbos=True):
 
 
 
-
 # Experiment 5 for Globally operator
 def globally2decorator(verbos=True):
     # Trace of length 1
@@ -440,6 +475,56 @@ def globally2decorator(verbos=True):
     print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
 
 
+# Experiment 5 for Globally operator
+def finally2decorator(verbos=True):
+    # Trace of length 1
+    trace1 = [
+        {'a': False}
+    ]
+    # Trace of length 1    
+    trace2 = [
+        {'a': True}
+    ]    
+    # Trace of length 2
+    trace3 = [
+        {'a': False},
+        {'a': True},        
+    ]    
+    # Trace of length 3
+    trace4 = [
+        {'a': False},
+        {'a': True},        
+        {'a': False}        
+    ]   
+
+    # Trace of length 4
+    trace5 = [
+        {'a': False},
+        {'a': False},        
+        {'a': False}        
+    ]            
+
+    expno = 0
+    returnvalueslist = []
+    # It is important to create a new execution object for each trace
+    # as BT are state machine. 
+    for trace in [trace1, trace2, trace3, trace4, trace5]:
+        # Create a bt sub-tree that is semantically equivalent to
+        # Globally LTLf operator
+        cnode = PropConditionNode('a')
+        gdecorator = Finally(cnode, 'Finally')
+        if verbos:
+            print('--------------')
+            print('Experiment no: ', expno)
+        # Call the excute function that will execute both BT and LTLf
+        returnvalueslist.append(execute_both_bt_ltlf(gdecorator, 'F a', trace, [cnode], verbos))
+        if verbos:
+            print('=============')        
+        expno += 1
+    count = count_bt_ltlf_return_values(returnvalueslist)
+    print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
+
+
 
 def main(args):
     if args.test == 'P':
@@ -455,7 +540,7 @@ def main(args):
     elif args.test == 'G':
         globally2decorator()
     elif args.test == 'F':
-        pass    
+        finally2decorator()
     elif args.test == 'ALL':
         pass    
 
