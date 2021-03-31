@@ -754,6 +754,64 @@ def until2subtree_randomtrace(verbos=True):
     print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
 
 
+# Counter example X psi1  wedge \psi2
+def counter_example(args, verbos=True):
+    # Trace of length 1
+    trace1 = [
+        {'a': False, 'b': False}
+    ]
+    # Trace of length 1    
+    trace2 = [
+        {'a': False, 'b': True}        
+    ]    
+    # Trace of length 1
+    trace3 = [
+        {'a': True, 'b': False}                
+    ]    
+    # Trace of length 1
+    trace4 = [
+        {'a': True, 'b': True}                
+    ]        
+    # Trace of length 3
+    trace5 = [
+        {'a': True, 'b': True},                
+        {'a': False, 'b': False},                        
+        {'a': True, 'b': True}                        
+    ]        
+
+    trace6 =  [
+        {'a': False, 'b': True},                
+        {'a': True, 'b': True}                        
+    ]        
+    # Experiment variables
+    expno = 0
+    returnvalueslist = []
+    # It is important to create a new execution object for each trace
+    # as BT are state machine. 
+    for trace in [trace1, trace2, trace3, trace4, trace5, trace6]:
+        # Create BT-sub tree that is semantically equivalent 
+        # to And LTLf operator
+        # And sub-tree
+        cnode1 = PropConditionNode('a')
+        cnode2 = PropConditionNode('b')  
+        # Next LTLf operator
+        # cnode = PropConditionNode('a')
+        ndecorator = Next(cnode1, 'Next')              
+        sequence = Sequence('And')
+
+        sequence.add_children([ndecorator, cnode2])
+        if verbos:
+            print('--------------')
+            print('Experiment no: ', expno)
+        # Call the excute function that will execute both BT and LTLf
+        returnvalueslist.append(execute_both_bt_ltlf(sequence, '(X a) & (b)', trace, [cnode1, cnode2], verbos))
+        if verbos:
+            print('=============')        
+        expno += 1
+    count = count_bt_ltlf_return_values(returnvalueslist)
+    print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
+
+
 def main(args):
     if args.test == 'P':
         proposition2condition()
@@ -769,13 +827,16 @@ def main(args):
         globally2decorator(args)
     elif args.test == 'F':
         finally2decorator(args)
+    elif args.test == 'C':
+        counter_example((args))
+
     elif args.test == 'U_random':
         until2subtree_randomtrace(args)
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test', type=str, choices = ['P', '~', '&', 'X', 'U', 'G', 'F', 'U_random'])
+    parser.add_argument('--test', type=str, choices = ['P', '~', '&', 'X', 'U', 'G', 'F', 'U_random', 'C'])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
     parser.add_argument('--no_trace_2_test', type=int, default=16)        
