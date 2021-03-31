@@ -782,13 +782,19 @@ def counter_example(args, verbos=True):
     trace6 =  [
         {'a': False, 'b': True},                
         {'a': True, 'b': True}                        
+    ]    
+
+    trace7 =  [
+        {'a': False, 'b': True},                
+        {'a': True, 'b': False}                        
     ]        
+
     # Experiment variables
     expno = 0
     returnvalueslist = []
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
-    for trace in [trace1, trace2, trace3, trace4, trace5, trace6]:
+    for trace in [trace1, trace2, trace3, trace4, trace5, trace6, trace7]:
         # Create BT-sub tree that is semantically equivalent 
         # to And LTLf operator
         # And sub-tree
@@ -805,6 +811,57 @@ def counter_example(args, verbos=True):
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
         returnvalueslist.append(execute_both_bt_ltlf(sequence, '(X a) & (b)', trace, [cnode1, cnode2], verbos))
+        if verbos:
+            print('=============')        
+        expno += 1
+    count = count_bt_ltlf_return_values(returnvalueslist)
+    print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
+
+
+
+# Counter example X psi1  wedge \psi2
+def counter_example1(args, verbos=True):
+    # Trace of length 1
+    trace1 = [
+        {'a': False, 'b': True, 'c': False},
+        {'a': True, 'b': False, 'c': False},        
+        {'a': False, 'b': False, 'c': True}       
+    ]  
+
+    # Experiment variables
+    expno = 0
+    returnvalueslist = []
+    # It is important to create a new execution object for each trace
+    # as BT are state machine. 
+    for trace in [trace1]:
+        # Create BT-sub tree that is semantically equivalent 
+        # to And LTLf operator
+        # And sub-tree
+        
+        # (X\psi_1 \wedge \psi_2) U \psi_3
+        # And sub-tree        
+        cnode1 = PropConditionNode('a')
+        cnode2 = PropConditionNode('b')  
+        # Next LTLf operator
+        # cnode = PropConditionNode('a')
+        ndecorator = Next(cnode1, 'Next')              
+        sequence = Sequence('And')
+        sequence.add_children([ndecorator, cnode2])
+        
+        # Until sub-tree
+        seqleft = Sequence('main')
+        # goal1 = PropConditionNode('a')
+        goal1 = sequence
+        goal2 = PropConditionNode('c')    
+        deltau = DeltaU(goal1)
+        seqleft.add_children([deltau, goal2])        
+        top = Finally(seqleft)   
+
+        if verbos:
+            print('--------------')
+            print('Experiment no: ', expno)
+        # Call the excute function that will execute both BT and LTLf
+        returnvalueslist.append(execute_both_bt_ltlf(sequence, '((X a) & (b)) U c', trace, [cnode1, cnode2, goal2], verbos))
         if verbos:
             print('=============')        
         expno += 1
@@ -829,6 +886,8 @@ def main(args):
         finally2decorator(args)
     elif args.test == 'C':
         counter_example((args))
+    elif args.test == 'C1':
+        counter_example1((args))        
 
     elif args.test == 'U_random':
         until2subtree_randomtrace(args)
@@ -836,7 +895,7 @@ def main(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test', type=str, choices = ['P', '~', '&', 'X', 'U', 'G', 'F', 'U_random', 'C'])
+    parser.add_argument('--test', type=str, choices = ['P', '~', '&', 'X', 'U', 'G', 'F', 'U_random', 'C', 'C1'])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
     parser.add_argument('--no_trace_2_test', type=int, default=16)        
