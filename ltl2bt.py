@@ -344,6 +344,45 @@ class Finally(Decorator):
                 return_status = common.Status.FAILURE                      
         self.indx += 1
         return return_status
+
+
+# Just a simple condition node that implements Finally LTLf operator
+class UFinally(Decorator):
+    """Decorator node for the Finally operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Finally LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(UFinally, self).__init__(name=name, child=child)
+        self.found_success = False
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Globally operator status
+        """        
+        # For finally the atomic proposition needs to hold for 
+        # just a state. So if we find one success then Finally returns Success
+        # This give access to the child class of decorator class
+        return_status = None
+        if self.found_success:
+            return_status = common.Status.SUCCESS                       
+        else:
+            if self.decorated.status == common.Status.SUCCESS:
+                self.found_success = True                
+                return_status = common.Status.SUCCESS
+            elif self.decorated.status == common.Status.FAILURE:
+                return_status = common.Status.FAILURE                      
+        return return_status
+
 ## Until operator
 
 # Right sub-tree Decorator for the until node
@@ -729,7 +768,7 @@ def until2subtree(args, verbos=True):
         goal2 = PropConditionNode('b')    
         deltau = DeltaU(goal1)
         seqleft.add_children([deltau, goal2])        
-        top = Finally(seqleft)        
+        top = UFinally(seqleft)        
 
         if verbos:
             print('--------------')
