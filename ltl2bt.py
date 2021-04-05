@@ -50,9 +50,9 @@ def getrandomtrace(n=2, maxtracelen=0):
 
 # Method that calls the BT execution node setup method
 # This supplies trace at time i for the nodes
-def setup_node(nodes, trace_i):
+def setup_node(nodes, trace, i):
     for node in nodes:
-        node.setup(0, trace_i)
+        node.setup(0, trace, i)
 
 
 # Method executes a BT passed as an argument
@@ -61,7 +61,8 @@ def execute_bt(bt, trace, nodes):
     #       trace -> a trace of lenght m
     #       nodes -> Execution nodes of BT that takes trace as input
     for k in range(len(trace)):
-        setup_node(nodes, trace[k])
+        # setup_node(nodes, trace[k])
+        setup_node(nodes, trace, k)        
         bt.tick()
     return bt.root.status
 
@@ -115,7 +116,8 @@ class PropConditionNode(Behaviour):
         super(PropConditionNode, self).__init__(name)
         self.proposition_symbol = name
     
-    def setup(self, timeout, value=False):
+    # def setup(self, timeout, value=False):
+    def setup(self, timeout, trace=[], index=0):    
         """Have defined the setup method.
 
         This method defines the other objects required for the
@@ -126,7 +128,9 @@ class PropConditionNode(Behaviour):
         value: A dict object with key as the proposition symbol and 
                boolean value as values. Supplied by trace.
         """
-        self.value = value
+        # self.value = value
+        self.trace = trace
+        self.index = index
 
     def initialise(self):
         """Everytime initialization. Not required for now."""
@@ -140,7 +144,8 @@ class PropConditionNode(Behaviour):
         ## return Success
         # else
         ## return Failure
-        if self.value[self.proposition_symbol]:
+        # if self.value[self.proposition_symbol]:
+        if self.trace[self.index][self.proposition_symbol]:        
             return common.Status.SUCCESS
         else:
             return common.Status.FAILURE
@@ -356,7 +361,6 @@ class DeltaU(Decorator):
 
 
 ## Experiments to test each LTLf operator and its BT sub-tree
-
 
 # Experiment 1 for simple atomic propositions
 def proposition2condition(verbos=True):
@@ -828,12 +832,17 @@ def counter_example1(args, verbos=True):
         {'a': False, 'b': False, 'c': True}       
     ]  
 
+    trace2 = [
+        {'a': False, 'b': True, 'c': True},
+        {'a': True, 'b': True, 'c': False},        
+    ]  
+
     # Experiment variables
     expno = 0
     returnvalueslist = []
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
-    for trace in [trace1]:
+    for trace in [trace1, trace2]:
         # Create BT-sub tree that is semantically equivalent 
         # to And LTLf operator
         # And sub-tree
@@ -869,6 +878,61 @@ def counter_example1(args, verbos=True):
     print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))
 
 
+# Counter example X psi1  wedge \psi2
+def counter_example2(args, verbos=True):
+    # Trace of length 1
+    trace1 = [
+        {'a': False, 'b': True, 'c': False},
+        {'a': True, 'b': False, 'c': False},        
+        {'a': False, 'b': False, 'c': True}       
+    ]  
+
+    trace2 = [
+        {'a': False, 'b': True, 'c': True},
+        {'a': True, 'b': True, 'c': False},        
+    ]  
+
+    # Experiment variables
+    expno = 0
+    returnvalueslist = []
+    # It is important to create a new execution object for each trace
+    # as BT are state machine. 
+    for trace in [trace1, trace2]:
+        # Create BT-sub tree that is semantically equivalent 
+        # to And LTLf operator
+        # And sub-tree
+        
+        # (X\psi_1 \wedge \psi_2) U \psi_3
+        # And sub-tree        
+        cnode1 = PropConditionNode('a')
+        cnode2 = PropConditionNode('b')  
+        # Next LTLf operator
+        # cnode = PropConditionNode('a')
+        ndecorator = Next(cnode1, 'Next')              
+        sequence = Sequence('And')
+        sequence.add_children([ndecorator, cnode2])
+        
+        # Until sub-tree
+        seqleft = Sequence('main')
+        # goal1 = PropConditionNode('a')
+        goal1 = sequence
+        goal2 = PropConditionNode('c')    
+        deltau = DeltaU(goal1)
+        seqleft.add_children([deltau, goal2])        
+        top = Finally(seqleft)   
+
+        if verbos:
+            print('--------------')
+            print('Experiment no: ', expno)
+        # Call the excute function that will execute both BT and LTLf
+        returnvalueslist.append(execute_both_bt_ltlf(sequence, '((X a) & (b)) U c', trace, [cnode1, cnode2, goal2], verbos))
+        if verbos:
+            print('=============')        
+        expno += 1
+    count = count_bt_ltlf_return_values(returnvalueslist)
+    print("Total Experiment Runs: {}, BT and LTLf agree: {}".format(expno, count))    
+
+
 def main(args):
     if args.test == 'P':
         proposition2condition()
@@ -888,14 +952,15 @@ def main(args):
         counter_example((args))
     elif args.test == 'C1':
         counter_example1((args))        
-
+    elif args.test == 'C2':
+        counter_example2((args))
     elif args.test == 'U_random':
         until2subtree_randomtrace(args)
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test', type=str, choices = ['P', '~', '&', 'X', 'U', 'G', 'F', 'U_random', 'C', 'C1'])
+    parser.add_argument('--test', type=str, choices = ['P', '~', '&', 'X', 'U', 'G', 'F', 'U_random', 'C', 'C1', 'C2'])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
     parser.add_argument('--no_trace_2_test', type=int, default=16)        
