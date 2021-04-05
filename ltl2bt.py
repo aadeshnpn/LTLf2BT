@@ -89,9 +89,9 @@ def getrandomtrace4(n=2, maxtracelen=0):
 
 # Method that calls the BT execution node setup method
 # This supplies trace at time i for the nodes
-def setup_node(nodes, trace):
+def setup_node(nodes, trace, k):
     for node in nodes:
-        node.setup(0, trace)
+        node.setup(0, trace, k)
 
 
 # Method executes a BT passed as an argument
@@ -99,9 +99,10 @@ def execute_bt(bt, trace, nodes):
     # Args: bt -> BT to tick
     #       trace -> a trace of lenght m
     #       nodes -> Execution nodes of BT that takes trace as input
-    for k in range(len(trace)):
-        # setup_node(nodes, trace[k])
-        setup_node(nodes, trace)        
+
+    # setup_node(nodes, trace[k])
+    for k in range(len(trace)):    
+        setup_node(nodes, trace, k)        
         bt.tick()
     return bt.root.status
 
@@ -130,6 +131,51 @@ def execute_both_bt_ltlf(subtree, formula, trace, nodes, verbos=True):
     return bt_status, ltlf_status
 
 
+# Method executes a BT passed as an argument
+def execute_bt_subtrees(bts, trace, nodes):
+    # Args: bts -> All BTs sub-tree to tick. First one is the combined node
+    #       trace -> a trace of lenght m
+    #       nodes -> Execution nodes of BT that takes trace as input
+
+    # setup_node(nodes, trace[k])
+    # For tick all the BT-tree sub-trees
+    for k in range(len(trace)):    
+        setup_node(nodes, trace, k)        
+        for i in range(1, len(bts)):
+            bts[i].tick()
+
+    # Finally tick the main sub-tree
+    setup_node(nodes, trace, 0)        
+    bts[0].tick()  
+
+    return bts[0].root.status
+
+
+# Execute both BT and Ltlf with same traces for comparision
+def execute_both_bt_subtree_ltlf(subtree, formula, trace, nodes, verbos=True):
+    # Args:
+        # Which BT class to use
+        # LTL formual
+        # Trace of lenght m
+        # BT exeuction nodes which require trace input
+    # Trace of length 1
+
+    # Create a BT from the subtree
+    roots = []
+    for stree in subtree:
+        roots += [BehaviourTree(stree)]
+    # print(py_trees.display.ascii_tree(root.root))
+    # Creating a LTLf parser object
+    parser = LTLfParser()
+    # Parsed formula
+    parsed_formula = parser(formula)
+    bt_status = execute_bt_subtrees(roots, trace, nodes)
+    ltlf_status = parsed_formula.truth(trace)
+    if verbos:
+        print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(trace, bt_status, ltlf_status))
+    return bt_status, ltlf_status    
+
+
 # Function that compares retsults between LTLf and BT
 def count_bt_ltlf_return_values(returnvalues):
     count = 0
@@ -154,10 +200,10 @@ class PropConditionNode(Behaviour):
         """Init method for the condition node."""
         super(PropConditionNode, self).__init__(name)
         self.proposition_symbol = name
-        self.index = 0
+        # self.index = 0
     
     # def setup(self, timeout, value=False):
-    def setup(self, timeout, trace=[]):    
+    def setup(self, timeout, trace=[], index=0):    
         """Have defined the setup method.
 
         This method defines the other objects required for the
@@ -170,7 +216,7 @@ class PropConditionNode(Behaviour):
         """
         # self.value = value
         self.trace = trace
-        # self.index = index
+        self.index = index
 
     def initialise(self):
         """Everytime initialization. Not required for now."""
@@ -193,7 +239,6 @@ class PropConditionNode(Behaviour):
             # return common.Status.FAILURE
             return_value = common.Status.FAILURE            
 
-        self.index += 1
         return return_value
 
 
@@ -279,6 +324,7 @@ class Next(Decorator):
                 elif self.decorated.status == common.Status.FAILURE:
                     self.next_status = common.Status.FAILURE
             self.idx += 1            
+
         return self.next_status
 
 
@@ -942,12 +988,13 @@ def counter_example(args, verbos=True):
         ndecorator = Next(cnode1, 'Next')              
         sequence = Sequence('And')
 
-        sequence.add_children([cnode2, ndecorator])
+        # sequence.add_children([cnode2, ndecorator])
+        sequence.add_children([ndecorator, cnode2])        
         if verbos:
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
-        returnvalueslist.append(execute_both_bt_ltlf(sequence, '(b) & X(a)', trace, [cnode1, cnode2], verbos))
+        returnvalueslist.append(execute_both_bt_subtree_ltlf([sequence, ndecorator, cnode2], 'X(a) & (b)', trace, [cnode1, cnode2], verbos))
         if verbos:
             print('=============')        
         expno += 1
