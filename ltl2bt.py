@@ -1,6 +1,6 @@
 from flloat.parser.ltlf import LTLfParser
 
-from py_trees.composites import Sequence, Selector
+from py_trees.composites import Sequence, Selector, Parallel
 from py_trees.decorators import Decorator, Inverter
 from py_trees.trees import BehaviourTree
 from py_trees.behaviour import Behaviour
@@ -50,9 +50,9 @@ def getrandomtrace(n=2, maxtracelen=0):
 
 # Method that calls the BT execution node setup method
 # This supplies trace at time i for the nodes
-def setup_node(nodes, trace, i):
+def setup_node(nodes, trace):
     for node in nodes:
-        node.setup(0, trace, i)
+        node.setup(0, trace)
 
 
 # Method executes a BT passed as an argument
@@ -62,7 +62,7 @@ def execute_bt(bt, trace, nodes):
     #       nodes -> Execution nodes of BT that takes trace as input
     for k in range(len(trace)):
         # setup_node(nodes, trace[k])
-        setup_node(nodes, trace, k)        
+        setup_node(nodes, trace)        
         bt.tick()
     return bt.root.status
 
@@ -115,9 +115,10 @@ class PropConditionNode(Behaviour):
         """Init method for the condition node."""
         super(PropConditionNode, self).__init__(name)
         self.proposition_symbol = name
+        self.index = 0
     
     # def setup(self, timeout, value=False):
-    def setup(self, timeout, trace=[], index=0):    
+    def setup(self, timeout, trace=[]):    
         """Have defined the setup method.
 
         This method defines the other objects required for the
@@ -130,7 +131,7 @@ class PropConditionNode(Behaviour):
         """
         # self.value = value
         self.trace = trace
-        self.index = index
+        # self.index = index
 
     def initialise(self):
         """Everytime initialization. Not required for now."""
@@ -145,10 +146,16 @@ class PropConditionNode(Behaviour):
         # else
         ## return Failure
         # if self.value[self.proposition_symbol]:
+        return_value = None
         if self.trace[self.index][self.proposition_symbol]:        
-            return common.Status.SUCCESS
+            return_value = common.Status.SUCCESS 
+            # return common.Status.SUCCESS
         else:
-            return common.Status.FAILURE
+            # return common.Status.FAILURE
+            return_value = common.Status.FAILURE            
+
+        self.index += 1
+        return return_value
 
 
 # Just a simple condition node that implements atomic propositions
@@ -211,15 +218,28 @@ class Next(Decorator):
         """        
         # At index i, return Failure
         # At index i+1, return self.decorated
-        if self.idx == 0:
+        # if self.idx == 0:
+        #     self.next_status = common.Status.FAILURE
+        # elif self.idx == 1:
+        #     # This give access to the child class of decorator class
+        #     if self.decorated.status == common.Status.SUCCESS:
+        #         self.next_status = common.Status.SUCCESS
+        #     elif self.decorated.status == common.Status.FAILURE:
+        #         self.next_status = common.Status.FAILURE
+        # self.idx += 1
+        if len(self.decorated.trace) <= 1:
             self.next_status = common.Status.FAILURE
-        elif self.idx == 1:
-            # This give access to the child class of decorator class
-            if self.decorated.status == common.Status.SUCCESS:
-                self.next_status = common.Status.SUCCESS
-            elif self.decorated.status == common.Status.FAILURE:
-                self.next_status = common.Status.FAILURE
-        self.idx += 1
+        else:
+            # print(self.idx, self.decorated.index, self.decorated.status)
+            if self.idx == 0:
+                self.next_status = common.Status.RUNNING
+            elif self.idx == 1:
+                # This give access to the child class of decorator class
+                if self.decorated.status == common.Status.SUCCESS:
+                    self.next_status = common.Status.SUCCESS
+                elif self.decorated.status == common.Status.FAILURE:
+                    self.next_status = common.Status.FAILURE
+            self.idx += 1            
         return self.next_status
 
 
@@ -473,7 +493,7 @@ def and2sequence(verbos=True):
         # And sub-tree
         cnode1 = PropConditionNode('a')
         cnode2 = PropConditionNode('b')        
-        sequence = Sequence('And')
+        sequence = Parallel('And')
 
         sequence.add_children([cnode1, cnode2])
         if verbos:
@@ -523,11 +543,13 @@ def next2decorator(args, verbos=True):
         # Next LTLf operator
         cnode = PropConditionNode('a')
         ndecorator = Next(cnode, 'Next')
+        seq = Sequence('root')
+        seq.add_children([ndecorator])
         if verbos:
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
-        returnvalueslist.append(execute_both_bt_ltlf(ndecorator, 'X a', trace, [cnode], verbos))
+        returnvalueslist.append(execute_both_bt_ltlf(seq, 'X a', trace, [cnode], verbos))
         if verbos:
             print('=============')        
         expno += 1
