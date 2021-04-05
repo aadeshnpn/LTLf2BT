@@ -78,8 +78,8 @@ def execute_both_bt_ltlf(subtree, formula, trace, nodes, verbos=True):
     # Trace of length 1
 
     # Create a BT from the subtree
-    root = BehaviourTree(subtree)    
-    
+    root = BehaviourTree(subtree)   
+    print(py_trees.display.ascii_tree(root.root))
     # Creating a LTLf parser object
     parser = LTLfParser()
     # Parsed formula
@@ -898,7 +898,7 @@ def counter_example(args, verbos=True):
         # Next LTLf operator
         # cnode = PropConditionNode('a')
         ndecorator = Next(cnode1, 'Next')              
-        sequence = Sequence('And')
+        sequence = Parallel('And')
 
         sequence.add_children([ndecorator, cnode2])
         if verbos:
@@ -945,7 +945,7 @@ def counter_example1(args, verbos=True):
         # Next LTLf operator
         # cnode = PropConditionNode('a')
         ndecorator = Next(cnode1, 'Next')              
-        sequence = Sequence('And')
+        sequence = Parallel('And')
         sequence.add_children([ndecorator, cnode2])
         
         # Until sub-tree
@@ -955,13 +955,13 @@ def counter_example1(args, verbos=True):
         goal2 = PropConditionNode('c')    
         deltau = DeltaU(goal1)
         seqleft.add_children([deltau, goal2])        
-        top = Finally(seqleft)   
+        top = UFinally(seqleft)   
 
         if verbos:
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
-        returnvalueslist.append(execute_both_bt_ltlf(sequence, '((X a) & (b)) U c', trace, [cnode1, cnode2, goal2], verbos))
+        returnvalueslist.append(execute_both_bt_ltlf(top, '((X a) & (b)) U c', trace, [cnode1, cnode2, goal2], verbos))
         if verbos:
             print('=============')        
         expno += 1
@@ -1000,7 +1000,7 @@ def counter_example2(args, verbos=True):
         # Next LTLf operator
         # cnode = PropConditionNode('a')
         ndecorator = Next(cnode1, 'Next')              
-        sequence = Sequence('And')
+        sequence = Parallel('And')
         sequence.add_children([ndecorator, cnode2])
         
         # Until sub-tree
@@ -1009,14 +1009,15 @@ def counter_example2(args, verbos=True):
         goal1 = sequence
         goal2 = PropConditionNode('c')    
         deltau = DeltaU(goal1)
-        seqleft.add_children([deltau, goal2])        
-        top = Finally(seqleft)   
+        seqleft.add_children([goal2, deltau])  
+
+        top = UFinally(seqleft)   
 
         if verbos:
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
-        returnvalueslist.append(execute_both_bt_ltlf(sequence, '((X a) & (b)) U c', trace, [cnode1, cnode2, goal2], verbos))
+        returnvalueslist.append(execute_both_bt_ltlf(top, 'c U ((X a) & (b))', trace, [cnode1, cnode2, goal2], verbos))
         if verbos:
             print('=============')        
         expno += 1
