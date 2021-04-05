@@ -260,6 +260,7 @@ class Globally(Decorator):
         """
         super(Globally, self).__init__(name=name, child=child)
         self.found_failure = False
+        self.indx = 1
 
     def update(self):
         """
@@ -269,15 +270,29 @@ class Globally(Decorator):
         # For globally the atomic proposition needs to hold for 
         # all trace. So if we find failure then Globally returns Failue
         # This give access to the child class of decorator class
+        return_status = None
         if self.found_failure:
-            return common.Status.FAILURE
-        else:
+            return_status = common.Status.FAILURE
+        elif len(self.decorated.trace) == 1:        
             if self.decorated.status == common.Status.SUCCESS:
-                return common.Status.SUCCESS
+                return_status = common.Status.SUCCESS
             elif self.decorated.status == common.Status.FAILURE:
                 self.found_failure = True
-                return common.Status.FAILURE      
-
+                return_status = common.Status.FAILURE            
+        elif self.indx < len(self.decorated.trace):
+            if self.decorated.status == common.Status.SUCCESS:
+                return_status = common.Status.RUNNING
+            elif self.decorated.status == common.Status.FAILURE:
+                self.found_failure = True
+                return_status = common.Status.FAILURE      
+        else:
+            if self.decorated.status == common.Status.SUCCESS:
+                return_status = common.Status.SUCCESS
+            elif self.decorated.status == common.Status.FAILURE:
+                self.found_failure = True
+                return_status = common.Status.FAILURE      
+        self.indx += 1
+        return return_status
 
 # Just a simple condition node that implements Finally LTLf operator
 class Finally(Decorator):
@@ -296,6 +311,7 @@ class Finally(Decorator):
         """
         super(Finally, self).__init__(name=name, child=child)
         self.found_success = False
+        self.indx = 1
 
     def update(self):
         """
@@ -305,15 +321,29 @@ class Finally(Decorator):
         # For finally the atomic proposition needs to hold for 
         # just a state. So if we find one success then Finally returns Success
         # This give access to the child class of decorator class
+        return_status = None
         if self.found_success:
-            return common.Status.SUCCESS
+            return_status = common.Status.SUCCESS
+        elif len(self.decorated.trace) == 1:        
+            if self.decorated.status == common.Status.SUCCESS:
+                self.found_success = True                
+                return_status = common.Status.SUCCESS
+            elif self.decorated.status == common.Status.FAILURE:
+                return_status = common.Status.FAILURE                        
+        elif self.indx < len(self.decorated.trace):
+            if self.decorated.status == common.Status.SUCCESS:
+                self.found_success = True                
+                return_status = common.Status.SUCCESS
+            elif self.decorated.status == common.Status.FAILURE:
+                return_status = common.Status.RUNNING      
         else:
             if self.decorated.status == common.Status.SUCCESS:
                 self.found_success = True                
-                return common.Status.SUCCESS
+                return_status = common.Status.SUCCESS
             elif self.decorated.status == common.Status.FAILURE:
-                return common.Status.FAILURE      
-
+                return_status = common.Status.FAILURE                      
+        self.indx += 1
+        return return_status
 ## Until operator
 
 # Right sub-tree Decorator for the until node
