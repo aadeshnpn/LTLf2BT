@@ -139,12 +139,13 @@ def execute_bt_subtrees(bts, trace, nodes):
 
     # setup_node(nodes, trace[k])
     # For tick all the BT-tree sub-trees
-    for k in range(len(trace)):    
-        setup_node(nodes, trace, k)        
-        for i in range(1, len(bts)):
+    for i in range(1, len(bts)):
+        for k in range(len(trace)):    
+            setup_node(nodes, trace, k)                
             bts[i].tick()
-
+    # print([bts[i].root.status for i in range(1, len(bts))])
     # Finally tick the main sub-tree
+    # for k in range(len(trace)):        
     setup_node(nodes, trace, 0)        
     bts[0].tick()  
 
@@ -172,7 +173,12 @@ def execute_both_bt_subtree_ltlf(subtree, formula, trace, nodes, verbos=True):
     bt_status = execute_bt_subtrees(roots, trace, nodes)
     ltlf_status = parsed_formula.truth(trace)
     if verbos:
-        print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(trace, bt_status, ltlf_status))
+        if ltlf_status == True and bt_status == common.Status.SUCCESS:
+            pass
+        elif ltlf_status == False and bt_status == common.Status.FAILURE:
+            pass
+        else:
+            print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(trace, bt_status, ltlf_status))
     return bt_status, ltlf_status    
 
 
@@ -467,6 +473,36 @@ class UFinally(Decorator):
             elif self.decorated.status == common.Status.FAILURE:
                 return_status = common.Status.FAILURE                      
         return return_status
+
+# And decorator for And operator that uses sequence node
+class AndDecorator(Decorator):
+    """Decorator node for the And operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Finally LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(AndDecorator, self).__init__(name=name, child=child)
+        self.first_trace = None
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the And operator status
+        """        
+        if self.first_trace is None:
+            if self.decorated.status == common.Status.SUCCESS:
+                self.first_trace = common.Status.SUCCESS
+            elif self.decorated.status == common.Status.FAILURE:
+                self.first_trace = common.Status.FAILURE                      
+        return self.first_trace
 
 ## Until operator
 
@@ -986,15 +1022,16 @@ def counter_example(args, verbos=True):
         # Next LTLf operator
         # cnode = PropConditionNode('a')
         ndecorator = Next(cnode1, 'Next')              
-        sequence = Sequence('And')
+        sequence = Parallel('And')
 
         # sequence.add_children([cnode2, ndecorator])
-        sequence.add_children([ndecorator, cnode2])        
+        sequence.add_children([ndecorator, cnode2])  
+        top = AndDecorator(sequence)
         if verbos:
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
-        returnvalueslist.append(execute_both_bt_subtree_ltlf([sequence, ndecorator, cnode2], 'X(a) & (b)', trace, [cnode1, cnode2], verbos))
+        returnvalueslist.append(execute_both_bt_subtree_ltlf([top, ndecorator, cnode2], 'X(a) & (b)', trace, [cnode1, cnode2], verbos))
         if verbos:
             print('=============')        
         expno += 1
@@ -1005,24 +1042,32 @@ def counter_example(args, verbos=True):
 
 # Counter example X psi1  wedge \psi2
 def counter_example1(args, verbos=True):
-    # Trace of length 1
-    trace1 = [
-        {'a': False, 'b': True, 'c': False},
-        {'a': True, 'b': False, 'c': False},        
-        {'a': False, 'b': False, 'c': True}       
-    ]  
+    if args.trace == 'fixed':        
+        # Trace of length 1
+        trace1 = [
+            {'a': False, 'b': True, 'c': False},
+            {'a': True, 'b': False, 'c': False},        
+            {'a': False, 'b': False, 'c': True}       
+        ]  
 
-    trace2 = [
-        {'a': False, 'b': True, 'c': True},
-        {'a': True, 'b': True, 'c': False},        
-    ]  
-
+        trace2 = [
+            {'a': False, 'b': True, 'c': True},
+            {'a': True, 'b': True, 'c': False},        
+        ]  
+        
+        trace3 = [
+            {'a': False, 'b': True, 'c': False},
+            {'a': True, 'b': True, 'c': True},        
+        ]          
+        traces = [trace1, trace2, trace3]
+    else:
+        traces = getrandomtrace4(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
     # Experiment variables
     expno = 0
     returnvalueslist = []
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
-    for trace in [trace1, trace2]:
+    for trace in traces:
         # Create BT-sub tree that is semantically equivalent 
         # to And LTLf operator
         # And sub-tree
@@ -1050,7 +1095,7 @@ def counter_example1(args, verbos=True):
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
-        returnvalueslist.append(execute_both_bt_ltlf(top, '((X a) & (b)) U c', trace, [cnode1, cnode2, goal2], verbos))
+        returnvalueslist.append(execute_both_bt_subtree_ltlf([top, ndecorator, sequence], '((X a) & (b)) U c', trace, [cnode1, cnode2, goal2], verbos))
         if verbos:
             print('=============')        
         expno += 1
