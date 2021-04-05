@@ -48,6 +48,45 @@ def getrandomtrace(n=2, maxtracelen=0):
     return tracelist
 
 
+# Method to randomly create traces
+def getrandomtrace4(n=2, maxtracelen=0):
+    t1 = [
+        {'a': False, 'b': False, 'c': False, 'd': False},
+        {'a': False, 'b': False, 'c': True, 'd': False},        
+        {'a': False, 'b': False, 'c': False, 'd': True},        
+        {'a': False, 'b': False, 'c': True, 'd': True},        
+        {'a': True, 'b': False, 'c': False, 'd': False},
+        {'a': True, 'b': False, 'c': True, 'd': False},        
+        {'a': True, 'b': False, 'c': False, 'd': True},        
+        {'a': True, 'b': False, 'c': True, 'd': True},                
+        {'a': False, 'b': True, 'c': False, 'd': False},
+        {'a': False, 'b': True, 'c': True, 'd': False},        
+        {'a': False, 'b': True, 'c': False, 'd': True},        
+        {'a': False, 'b': True, 'c': True, 'd': True},                
+        {'a': True, 'b': True, 'c': False, 'd': False},
+        {'a': True, 'b': True, 'c': True, 'd': False},        
+        {'a': True, 'b': True, 'c': False, 'd': True},        
+        {'a': True, 'b': True, 'c': True, 'd': True},                 
+        ]
+
+    tracelist = []
+    def gettraces():
+        if maxtracelen == 0:
+            m = np.random.randint(1, 50)
+        else:
+            m = maxtracelen
+        choices = {i:t1[i] for i in range(len(t1))}
+        trace = []
+        for i in range(m):
+            j = np.random.choice(list(range(len(t1))), m)
+            trace.append(choices[j[i]])
+        return trace    
+    for k in range(n):
+        tracelist.append(gettraces())
+
+    return tracelist    
+
+
 # Method that calls the BT execution node setup method
 # This supplies trace at time i for the nodes
 def setup_node(nodes, trace):
@@ -79,7 +118,7 @@ def execute_both_bt_ltlf(subtree, formula, trace, nodes, verbos=True):
 
     # Create a BT from the subtree
     root = BehaviourTree(subtree)   
-    print(py_trees.display.ascii_tree(root.root))
+    # print(py_trees.display.ascii_tree(root.root))
     # Creating a LTLf parser object
     parser = LTLfParser()
     # Parsed formula
@@ -851,45 +890,48 @@ def until2subtree_randomtrace(verbos=True):
 
 # Counter example X psi1  wedge \psi2
 def counter_example(args, verbos=True):
-    # Trace of length 1
-    trace1 = [
-        {'a': False, 'b': False}
-    ]
-    # Trace of length 1    
-    trace2 = [
-        {'a': False, 'b': True}        
-    ]    
-    # Trace of length 1
-    trace3 = [
-        {'a': True, 'b': False}                
-    ]    
-    # Trace of length 1
-    trace4 = [
-        {'a': True, 'b': True}                
-    ]        
-    # Trace of length 3
-    trace5 = [
-        {'a': True, 'b': True},                
-        {'a': False, 'b': False},                        
-        {'a': True, 'b': True}                        
-    ]        
+    if args.trace == 'fixed':    
+        # Trace of length 1
+        trace1 = [
+            {'a': False, 'b': False}
+        ]
+        # Trace of length 1    
+        trace2 = [
+            {'a': False, 'b': True}        
+        ]    
+        # Trace of length 1
+        trace3 = [
+            {'a': True, 'b': False}                
+        ]    
+        # Trace of length 1
+        trace4 = [
+            {'a': True, 'b': True}                
+        ]        
+        # Trace of length 3
+        trace5 = [
+            {'a': True, 'b': True},                
+            {'a': False, 'b': False},                        
+            {'a': True, 'b': True}                        
+        ]        
 
-    trace6 =  [
-        {'a': False, 'b': True},                
-        {'a': True, 'b': True}                        
-    ]    
+        trace6 =  [
+            {'a': False, 'b': True},                
+            {'a': True, 'b': True}                        
+        ]    
 
-    trace7 =  [
-        {'a': False, 'b': True},                
-        {'a': True, 'b': False}                        
-    ]        
-
+        trace7 =  [
+            {'a': False, 'b': True},                
+            {'a': True, 'b': False}                        
+        ]        
+        traces = [trace1, trace2, trace3, trace4, trace5, trace6, trace7]
+    else:
+        traces = getrandomtrace4(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
     # Experiment variables
     expno = 0
     returnvalueslist = []
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
-    for trace in [trace1, trace2, trace3, trace4, trace5, trace6, trace7]:
+    for trace in traces:
         # Create BT-sub tree that is semantically equivalent 
         # to And LTLf operator
         # And sub-tree
@@ -898,14 +940,14 @@ def counter_example(args, verbos=True):
         # Next LTLf operator
         # cnode = PropConditionNode('a')
         ndecorator = Next(cnode1, 'Next')              
-        sequence = Parallel('And')
+        sequence = Sequence('And')
 
-        sequence.add_children([ndecorator, cnode2])
+        sequence.add_children([cnode2, ndecorator])
         if verbos:
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
-        returnvalueslist.append(execute_both_bt_ltlf(sequence, '(X a) & (b)', trace, [cnode1, cnode2], verbos))
+        returnvalueslist.append(execute_both_bt_ltlf(sequence, '(b) & X(a)', trace, [cnode1, cnode2], verbos))
         if verbos:
             print('=============')        
         expno += 1
