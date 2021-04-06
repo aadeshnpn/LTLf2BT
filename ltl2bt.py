@@ -143,11 +143,12 @@ def execute_bt_subtrees(bts, trace, nodes):
         for k in range(len(trace)):    
             setup_node(nodes, trace, k)                
             bts[i].tick()
-    # print([bts[i].root.status for i in range(1, len(bts))])
+
     # Finally tick the main sub-tree
-    # for k in range(len(trace)):        
-    setup_node(nodes, trace, 0)        
-    bts[0].tick()  
+    for k in range(len(trace)):        
+        setup_node(nodes, trace, k)        
+        bts[0].tick()  
+        print(k, bts[0].root.status)
 
     return bts[0].root.status
 
@@ -569,6 +570,49 @@ class DeltaU(Decorator):
         return return_value
 
 
+# Right sub-tree Decorator for the until node
+class UntilDecorator(Decorator):
+    """Decorator node for the Until operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements a decorator for Until operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(UntilDecorator, self).__init__(name=name, child=child)
+        self.found_success = False
+        self.indx = 0
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Globally operator status
+        """        
+        # Handels For trace lenght 1
+        return_status = None
+        # if self.found_success:
+        #     return_status = common.Status.SUCCESS                               
+        # elif self.indx == 0:
+        #     if self.decorated.status == common.Status.SUCCESS:
+        #         self.found_success = True                
+        #         return_status = common.Status.SUCCESS
+        #     elif self.decorated.status == common.Status.FAILURE:
+        #         return_status = common.Status.FAILURE                                  
+        # elif self.indx == 1 and self.decorated.status == common.Status.SUCCESS:
+        #     pass
+        #     else:
+        #         if self.decorated.status == common.Status.SUCCESS:
+        #             self.found_success = True                
+        #             return_status = common.Status.SUCCESS
+        #         elif self.decorated.status == common.Status.FAILURE:
+        #             return_status = common.Status.FAILURE                      
+        # return return_status
 
 ## Experiments to test each LTLf operator and its BT sub-tree
 
@@ -884,11 +928,11 @@ def until2subtree(args, verbos=True):
     for trace in traces:
         # Create a bt sub-tree that is semantically equivalent to
         # Until sub-tree
-        seqleft = Sequence('main')
+        seqleft = Parallel('main')
         goal1 = PropConditionNode('a')
         goal2 = PropConditionNode('b')    
         deltau = DeltaU(goal1)
-        seqleft.add_children([deltau, goal2])        
+        seqleft.add_children([goal2, deltau])        
         top = UFinally(seqleft)        
 
         if verbos:
@@ -1025,13 +1069,13 @@ def counter_example(args, verbos=True):
         sequence = Parallel('And')
 
         # sequence.add_children([cnode2, ndecorator])
-        sequence.add_children([ndecorator, cnode2])  
+        sequence.add_children([cnode2, ndecorator])  
         top = AndDecorator(sequence)
         if verbos:
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
-        returnvalueslist.append(execute_both_bt_subtree_ltlf([top, ndecorator, cnode2], 'X(a) & (b)', trace, [cnode1, cnode2], verbos))
+        returnvalueslist.append(execute_both_bt_subtree_ltlf([top, cnode2, ndecorator], '(b) & X(a)', trace, [cnode1, cnode2], verbos))
         if verbos:
             print('=============')        
         expno += 1
@@ -1059,7 +1103,12 @@ def counter_example1(args, verbos=True):
             {'a': False, 'b': True, 'c': False},
             {'a': True, 'b': True, 'c': True},        
         ]          
-        traces = [trace1, trace2, trace3]
+
+        trace4 = [
+            {'a': True, 'b': True, 'c': False},
+            {'a': True, 'b': True, 'c': False},        
+        ]                  
+        traces = [trace1, trace2, trace3, trace4]
     else:
         traces = getrandomtrace4(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
     # Experiment variables
@@ -1081,14 +1130,14 @@ def counter_example1(args, verbos=True):
         ndecorator = Next(cnode1, 'Next')              
         sequence = Parallel('And')
         sequence.add_children([ndecorator, cnode2])
-        
+        # sand = AndDecorator(sequence)        
         # Until sub-tree
         seqleft = Sequence('main')
         # goal1 = PropConditionNode('a')
         goal1 = sequence
         goal2 = PropConditionNode('c')    
         deltau = DeltaU(goal1)
-        seqleft.add_children([deltau, goal2])        
+        seqleft.add_children([goal2, deltau])        
         top = UFinally(seqleft)   
 
         if verbos:
