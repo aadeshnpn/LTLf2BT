@@ -131,6 +131,7 @@ def execute_both_bt_ltlf(subtree, formula, trace, nodes, verbos=True):
     return bt_status, ltlf_status
 
 
+
 # Method executes a BT passed as an argument
 def execute_bt_subtrees(bts, trace, nodes):
     # Args: bts -> All BTs sub-tree to tick. First one is the combined node
@@ -148,9 +149,34 @@ def execute_bt_subtrees(bts, trace, nodes):
     for k in range(len(trace)):        
         setup_node(nodes, trace, k)        
         bts[0].tick()  
-        print(k, bts[0].root.status)
 
     return bts[0].root.status
+
+
+# Method executes a BT passed as an argument
+def execute_bt_subtrees_until(bts, trace, nodes):
+    # Args: bts -> All BTs sub-tree to tick. First one is the combined node
+    #       trace -> a trace of lenght m
+    #       nodes -> Execution nodes of BT that takes trace as input
+
+    # setup_node(nodes, trace[k])
+    # For tick all the BT-tree sub-trees
+    # for i in range(1, len(bts)):
+    #     for k in range(len(trace)):    
+    #         setup_node(nodes, trace, k)                
+    #         bts[i].tick()
+
+    # Finally tick the main sub-tree
+    j = 0
+    for k in range(len(trace)):        
+        setup_node(nodes, trace, k)        
+        bts[0].tick()  
+        if bts[0].status == common.Status.SUCCESS:
+            for i in range(j):        
+                setup_node(nodes, trace, i) 
+                bts[0].tick()                                  
+
+    return bts[0].root.status    
 
 
 # Execute both BT and Ltlf with same traces for comparision
@@ -181,6 +207,36 @@ def execute_both_bt_subtree_ltlf(subtree, formula, trace, nodes, verbos=True):
         else:
             print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(trace, bt_status, ltlf_status))
     return bt_status, ltlf_status    
+
+
+# Execute both BT and Ltlf with same traces for comparision
+def execute_both_bt_subtree_ltlf_until(subtree, formula, trace, nodes, verbos=True):
+    # Args:
+        # Which BT class to use
+        # LTL formual
+        # Trace of lenght m
+        # BT exeuction nodes which require trace input
+    # Trace of length 1
+
+    # Create a BT from the subtree
+    roots = []
+    for stree in subtree:
+        roots += [BehaviourTree(stree)]
+    # print(py_trees.display.ascii_tree(root.root))
+    # Creating a LTLf parser object
+    parser = LTLfParser()
+    # Parsed formula
+    parsed_formula = parser(formula)
+    bt_status = execute_bt_subtrees(roots, trace, nodes)
+    ltlf_status = parsed_formula.truth(trace)
+    if verbos:
+        if ltlf_status == True and bt_status == common.Status.SUCCESS:
+            pass
+        elif ltlf_status == False and bt_status == common.Status.FAILURE:
+            pass
+        else:
+            print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(trace, bt_status, ltlf_status))
+    return bt_status, ltlf_status        
 
 
 # Function that compares retsults between LTLf and BT
@@ -302,6 +358,10 @@ class Next(Decorator):
         self.idx = 0
         self.next_status = None
 
+    def reset(self):
+        self.next_status = None
+        self.idx = 0
+
     def update(self):
         """
         Main function that is called when BT ticks.
@@ -353,6 +413,10 @@ class Globally(Decorator):
         super(Globally, self).__init__(name=name, child=child)
         self.found_failure = False
         self.indx = 1
+    
+    def reset(self):
+        self.found_failure = False
+        self.idx = 1
 
     def update(self):
         """
@@ -404,6 +468,10 @@ class Finally(Decorator):
         super(Finally, self).__init__(name=name, child=child)
         self.found_success = False
         self.indx = 1
+    
+    def reset(self):
+        self.found_success = False
+        self.idx = 1
 
     def update(self):
         """
@@ -455,6 +523,9 @@ class UFinally(Decorator):
         """
         super(UFinally, self).__init__(name=name, child=child)
         self.found_success = False
+    
+    def reset(self):
+        self.found_success = False
 
     def update(self):
         """
@@ -474,7 +545,7 @@ class UFinally(Decorator):
             elif self.decorated.status == common.Status.FAILURE:
                 return_status = common.Status.FAILURE                      
         return return_status
-
+        
 # And decorator for And operator that uses sequence node
 class AndDecorator(Decorator):
     """Decorator node for the And operator.
@@ -491,6 +562,9 @@ class AndDecorator(Decorator):
             name : the decorator name
         """
         super(AndDecorator, self).__init__(name=name, child=child)
+        self.first_trace = None
+    
+    def reset(self):
         self.first_trace = None
 
     def update(self):
@@ -587,32 +661,29 @@ class UntilDecorator(Decorator):
         """
         super(UntilDecorator, self).__init__(name=name, child=child)
         self.found_success = False
+        self.i = 0
+        self.j = 0
         self.indx = 0
+        self.previous_value = common.Status.SUCCESS
+        self.previous_previous_value = common.Status.SUCCESS
+
 
     def update(self):
         """
         Main function that is called when BT ticks.
         This returns the Globally operator status
         """        
-        # Handels For trace lenght 1
         return_status = None
-        # if self.found_success:
-        #     return_status = common.Status.SUCCESS                               
-        # elif self.indx == 0:
-        #     if self.decorated.status == common.Status.SUCCESS:
-        #         self.found_success = True                
-        #         return_status = common.Status.SUCCESS
-        #     elif self.decorated.status == common.Status.FAILURE:
-        #         return_status = common.Status.FAILURE                                  
-        # elif self.indx == 1 and self.decorated.status == common.Status.SUCCESS:
-        #     pass
-        #     else:
-        #         if self.decorated.status == common.Status.SUCCESS:
-        #             self.found_success = True                
-        #             return_status = common.Status.SUCCESS
-        #         elif self.decorated.status == common.Status.FAILURE:
-        #             return_status = common.Status.FAILURE                      
-        # return return_status
+        # Handels For trace lenght 1
+        if self.indx == 0:
+            return_value = common.Status.SUCCESS
+        # Handel for trace lenght 2
+        else:
+            if self.decorated.status == common.Status.SUCCESS:
+                return_value = common.Status.SUCCESS
+            else:
+                return_value = common.Status.FAILURE
+        return return_value
 
 ## Experiments to test each LTLf operator and its BT sub-tree
 
@@ -927,19 +998,31 @@ def until2subtree(args, verbos=True):
     # as BT are state machine. 
     for trace in traces:
         # Create a bt sub-tree that is semantically equivalent to
-        # Until sub-tree
+        
+        # Old Until sub-tree
         seqleft = Parallel('main')
         goal1 = PropConditionNode('a')
         goal2 = PropConditionNode('b')    
         deltau = DeltaU(goal1)
         seqleft.add_children([goal2, deltau])        
         top = UFinally(seqleft)        
-
+        
+        # New until sub-tree
+        # goal1 = PropConditionNode('a')
+        # goal2 = PropConditionNode('b')    
+        # finallyb = Finally(goal2)
+        # deltau = UntilDecorator(goal1)
+        # a = deltau
+        # b = finallyb
+        # seq = Sequence('main')
+        
         if verbos:
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
         returnvalueslist.append(execute_both_bt_ltlf(top, 'a U b', trace, [goal1, goal2], verbos))
+        # returnvalueslist.append(
+        #     execute_both_bt_subtree_ltlf_until([seq, a, b], 'a U b', trace, [goal1, goal2], verbos))
         if verbos:
             print('=============')        
         expno += 1
@@ -1132,7 +1215,7 @@ def counter_example1(args, verbos=True):
         sequence.add_children([ndecorator, cnode2])
         # sand = AndDecorator(sequence)        
         # Until sub-tree
-        seqleft = Sequence('main')
+        seqleft = Parallel('main')
         # goal1 = PropConditionNode('a')
         goal1 = sequence
         goal2 = PropConditionNode('c')    
