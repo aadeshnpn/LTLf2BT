@@ -169,6 +169,7 @@ class PropConditionNode(Behaviour):
         # else
         ## return Failure
         # if self.value[self.proposition_symbol]:
+        print('proposition index',self.index, self.trace[self.index][self.proposition_symbol])
         try:
             if self.trace[self.index][self.proposition_symbol]:        
                 return_value = common.Status.SUCCESS 
@@ -314,6 +315,60 @@ class Next(Decorator):
             self.next_status = common.Status.FAILURE
 
         return self.next_status
+
+
+# Just a simple decorator node that implements Globally LTLf operator
+class Globally(Decorator):
+    """Decorator node for the Globally operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Globally LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Globally, self).__init__(name=name, child=child)
+        self.idx = 0
+        self.repeat_until_failure = True
+
+    def reset(self):
+        self.idx = 0
+        self.repeat_until_failure = True        
+        for child in self.children:
+            child.reset()
+    
+    def setup(self, timeout, trace, i=0):
+        self.idx = i
+        self.trace = trace   
+        self.decorated.setup(0, self.trace, self.idx)
+    
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Next operator status
+        """        
+        # This give access to the child class of decorator class
+        # if self.decorated.status == common.Status.SUCCESS:
+        #     self.next_status = common.Status.SUCCESS
+        # elif self.decorated.status == common.Status.FAILURE:
+        #     self.next_status = common.Status.FAILURE
+        #  Repeat until logic for decorator
+        print(self.decorated.status, self.idx)
+        return_value = self.decorated.status
+        for j in range(self.idx+1, len(self.trace)):
+            print('from G loop',j, return_value)
+            if return_value == common.Status.SUCCESS:
+                self.decorated.setup(0, self.trace, j)
+                return_value = self.decorated.update()                
+            elif return_value == common.Status.FAILURE:
+                break                
+            
+        return return_value
 
 
 ## Experiments to test each LTLf operator and its BT sub-tree
@@ -512,6 +567,34 @@ def composite4_next_and(args, verbos=True):
     finalnext = Next(andmain)
 
     expriments(traces, finalnext, [nextc, nextb, finalnext], 'X (((X c) & d) & (a & (X b)))', args)            
+
+
+# Experiment 9 for simple globally operator
+def globally2decorator(args, verbos=True):
+    if args.trace == 'fixed':    
+        # Trace of length 1
+        trace1 = [
+            {'a': False}
+        ]
+        # Trace of length 1    
+        trace2 = [
+            {'a': True}
+        ]    
+        # Trace of length 3
+        trace3 = [
+            {'a': True},
+            {'a': False},        
+            {'a': True}        
+        ]    
+        traces =[trace1, trace2, trace3]
+    else:
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    
+    # Experiment variables
+    cnode = PropConditionNode('a')
+    # ndecorator = Negation(cnode, 'Invert')  
+    gdecorator = Globally(cnode, 'Globally')
+    expriments(traces, gdecorator, [gdecorator], 'G a', args)
 
 
 def main(args):
