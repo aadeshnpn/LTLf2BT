@@ -197,6 +197,9 @@ class Negation(Decorator):
         """
         super(Negation, self).__init__(name=name, child=child)
 
+    def setup(self, timeout, trace, i=0):
+        self.decorated.setup(0, trace, i)
+
     def reset():
         for child in self.children:
             child.reset()
@@ -236,7 +239,7 @@ class And(Decorator):
             child : child behaviour node
             name : the decorator name
         """
-        super(Negation, self).__init__(name=name, child=child)
+        super(And, self).__init__(name=name, child=child)
 
     def reset():
         for child in self.children:
@@ -249,6 +252,10 @@ class And(Decorator):
     def setup(self, timeout, trace, i=0):
         self.idx = i
         self.trace = trace
+        # Find all the child nodes and call setup
+        childs = self.decorated.children
+        for child in childs:
+            child.setup(0, trace, i)
 
     def update(self):
         """
@@ -260,12 +267,7 @@ class And(Decorator):
         # else
         ## return Success
         # This give access to the child class of decorator class
-        newtraces = [self.decorated.status]
-        for i in range(1, len(self.trace)):
-            self.decorated.setup(0, trace, i)
-            self.decorated.tick()
-            newtraces.append(self.decorated.status)
-        return newtraces[self.idx]
+        return self.decorated.status
 
 
 # Just a simple condition node that implements Next LTLf operator
@@ -385,7 +387,7 @@ def negation2decorator(args, verbos=True):
     # Experiment variables
     cnode = PropConditionNode('a')
     ndecorator = Negation(cnode, 'Invert')  
-    expriments(traces, ndecorator, [cnode], '!a', args)
+    expriments(traces, ndecorator, [ndecorator], '!a', args)
 
 
 # Experiment 3 for simple and of atomic propositions
@@ -394,12 +396,12 @@ def and2sequence(args, verbos=True):
     cnode1 = PropConditionNode('c')
     cnode2 = PropConditionNode('d')        
     parll = Parallel('And')
-
     parll.add_children([cnode1, cnode2])
-    expriments(traces, parll, [cnode1, cnode2], 'c & d', args)
+    anddec = And(parll)    
+    expriments(traces, anddec, [anddec], 'c & d', args)
 
 
-# Experiment 4 for simple X and and
+# Experiment 4 for simple X
 def next2decorator(args, verbos=True):
     if args.trace == 'fixed':        
         # Trace of length 1
@@ -432,8 +434,33 @@ def next2decorator(args, verbos=True):
     # parll.add_children([cnode1, cnode2])
     # nextd = Next(parll)    
     nextd = Next(cnode1)
-    expriments(traces, nextd, [cnode1, nextd], '(X c)', args)        
+    expriments(traces, nextd, [nextd], '(X c)', args)        
     # expriments(traces, nextd, [cnode1, nextd], '(X (c & d))', args)    
+
+
+# Experiment 5 for simple X and &
+def composite1_next_and(args, verbos=True):
+    traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    cnode1 = PropConditionNode('c')
+    cnode2 = PropConditionNode('d')        
+    parll = Parallel('And')    
+    parll.add_children([cnode1, cnode2])
+    anddec = And(parll)    
+    nextd = Next(anddec)    
+    expriments(traces, nextd, [nextd], '(X (c & d))', args)        
+
+
+# Experiment 6 for simple X and &
+def composite2_next_and(args, verbos=True):
+    traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    cnode1 = PropConditionNode('c')
+    nextd = Next(cnode1)        
+    cnode2 = PropConditionNode('d')        
+    parll = Parallel('And')    
+    parll.add_children([nextd, cnode2])
+    anddec = And(parll)    
+
+    expriments(traces, anddec, [nextd, anddec], '((X c) & d)', args)        
 
 
 def main(args):
@@ -451,11 +478,19 @@ def main(args):
         globally2decorator(args)
     elif args.test == 'F':
         finally2decorator(args)
+    elif args.test == 'C1_X_&':
+        composite1_next_and(args)
+    elif args.test == 'C2_X_&':
+        composite2_next_and(args)
+
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test', type=str, choices = ['P', '~', '&', 'X', 'G', 'F'])
+    parser.add_argument(
+        '--test', type=str, choices = [
+            'P', '~', '&', 'X', 'G', 'F', 'C1_X_&', 'C2_X_&'
+            ])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
     parser.add_argument('--no_trace_2_test', type=int, default=16)        
