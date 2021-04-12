@@ -1238,17 +1238,20 @@ def counter_example1(args, verbos=True):
 # Counter example X psi1  wedge \psi2
 def counter_example2(args, verbos=True):
     # Trace of length 1
-    trace1 = [
-        {'a': False, 'b': True, 'c': False},
-        {'a': True, 'b': False, 'c': False},        
-        {'a': False, 'b': False, 'c': True}       
-    ]  
+    if args.trace == 'fixed':            
+        trace1 = [
+            {'a': False, 'b': True, 'c': False},
+            {'a': True, 'b': False, 'c': False},        
+            {'a': False, 'b': False, 'c': True}       
+        ]  
 
-    trace2 = [
-        {'a': False, 'b': True, 'c': True},
-        {'a': True, 'b': True, 'c': False},        
-    ]  
-
+        trace2 = [
+            {'a': False, 'b': True, 'c': True},
+            {'a': True, 'b': True, 'c': False},        
+        ]  
+        traces = [trace1, trace2, trace3, trace4]
+    else:
+        traces = getrandomtrace4(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
     # Experiment variables
     expno = 0
     returnvalueslist = []
@@ -1261,8 +1264,11 @@ def counter_example2(args, verbos=True):
         
         # (X\psi_1 \wedge \psi_2) U \psi_3
         # And sub-tree        
+  
         cnode1 = PropConditionNode('a')
-        cnode2 = PropConditionNode('b')  
+        cnode2 = PropConditionNode('b')
+        cnode3 = PropConditionNode('c')
+        cnode4 = PropConditionNode('d')        
         # Next LTLf operator
         # cnode = PropConditionNode('a')
         ndecorator = Next(cnode1, 'Next')              
@@ -1283,7 +1289,7 @@ def counter_example2(args, verbos=True):
             print('--------------')
             print('Experiment no: ', expno)
         # Call the excute function that will execute both BT and LTLf
-        returnvalueslist.append(execute_both_bt_ltlf(top, 'c U ((X a) & (b))', trace, [cnode1, cnode2, goal2], verbos))
+        returnvalueslist.append(execute_both_bt_ltlf(top, '((c & d) U (a & b))', trace, [cnode1, cnode2, goal2], verbos))
         if verbos:
             print('=============')        
         expno += 1

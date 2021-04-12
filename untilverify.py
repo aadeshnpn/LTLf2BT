@@ -6,7 +6,8 @@ def main():
 
     parser = LTLfParser()
 
-    formula_string = "((X a) & (b)) U c"
+    # formula_string = "((X a) & (b)) U c"
+    formula_string = " (X (a & b))"    
 
     formula = parser(formula_string)        # returns a LTLfFormula
 

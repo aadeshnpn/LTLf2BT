@@ -133,6 +133,7 @@ class PropConditionNode(Behaviour):
         """Init method for the condition node."""
         super(PropConditionNode, self).__init__(name)
         self.proposition_symbol = name
+
     
     # def setup(self, timeout, value=False):
     def setup(self, timeout, trace, i=0):    
@@ -154,7 +155,10 @@ class PropConditionNode(Behaviour):
         pass
 
     def reset(self):
-        pass
+        self.index = 0
+
+    def increment(self):
+        self.index += 1
 
     def update(self):
         """
@@ -165,13 +169,15 @@ class PropConditionNode(Behaviour):
         # else
         ## return Failure
         # if self.value[self.proposition_symbol]:
-        if self.trace[self.index][self.proposition_symbol]:        
-            return_value = common.Status.SUCCESS 
-        else:
+        try:
+            if self.trace[self.index][self.proposition_symbol]:        
+                return_value = common.Status.SUCCESS 
+            else:
+                return_value = common.Status.FAILURE            
+        except IndexError:
             return_value = common.Status.FAILURE            
 
         return return_value
-
 
 
 # Just a simple condition node that implements atomic propositions
@@ -194,7 +200,11 @@ class Negation(Decorator):
     def reset():
         for child in self.children:
             child.reset()
-
+    
+    def increment(self):
+        for child in self.children:
+            child.increment()
+    
     def update(self):
         """
         Main function that is called when BT ticks.
@@ -210,6 +220,100 @@ class Negation(Decorator):
         elif self.decorated.status == common.Status.SUCCESS:
             return common.Status.FAILURE
 
+
+# Just a simple condition node that implements atomic propositions
+class And(Decorator):
+    """Decorator node for the and of an atomic proposition.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the negation of an atomic LTLf propositions.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Negation, self).__init__(name=name, child=child)
+
+    def reset():
+        for child in self.children:
+            child.reset()
+    
+    def increment(self):
+        for child in self.children:
+            child.increment()
+
+    def setup(self, timeout, trace, i=0):
+        self.idx = i
+        self.trace = trace
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the inverted status
+        """        
+        # if the proposition value is true
+        ## return Failure
+        # else
+        ## return Success
+        # This give access to the child class of decorator class
+        newtraces = [self.decorated.status]
+        for i in range(1, len(self.trace)):
+            self.decorated.setup(0, trace, i)
+            self.decorated.tick()
+            newtraces.append(self.decorated.status)
+        return newtraces[self.idx]
+
+
+# Just a simple condition node that implements Next LTLf operator
+class Next(Decorator):
+    """Decorator node for the Next operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Next LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Next, self).__init__(name=name, child=child)
+        self.idx = 0
+        self.next_status = None
+        # self.pchilds = pchilds
+        # self.trace = trace
+
+    def reset(self):
+        self.next_status = None
+        self.idx = 0
+        for child in self.children:
+            child.reset()
+    
+    def setup(self, timeout, trace, i=0):
+        self.idx = i
+        self.trace = trace   
+        self.decorated.setup(0, self.trace, self.idx+1)
+    
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Next operator status
+        """        
+        # This give access to the child class of decorator class
+        if self.decorated.status == common.Status.SUCCESS:
+            self.next_status = common.Status.SUCCESS
+        elif self.decorated.status == common.Status.FAILURE:
+            self.next_status = common.Status.FAILURE
+
+        return self.next_status
+
+
 ## Experiments to test each LTLf operator and its BT sub-tree
 
 def expriments(traces, btroot, cnodes, formula, args, i=0, verbos=True):
@@ -218,11 +322,12 @@ def expriments(traces, btroot, cnodes, formula, args, i=0, verbos=True):
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
     for trace in traces:
+        i = 0 if args.trace =='fixed' else np.random.randint(0, len(trace))        
         if verbos:
             print('--------------')
-            print('Experiment no: ', expno)
+            print('Experiment no: ', expno, ',i=',i)
         # Call the excute function that will execute both BT and LTLf
-        i = 0 if args.trace =='fixed' else np.random.randint(0, len(trace))
+        # i = 0 if args.trace =='fixed' else np.random.randint(0, len(trace))
         returnvalueslist.append(execute_both_bt_ltlf(btroot, formula, trace, cnodes, i=i, verbos=True))
         if verbos:
             print('=============')        
@@ -257,7 +362,7 @@ def proposition2condition(args, verbos=True):
 
 
 # Experiment 2 for simple negation of atomic propositions
-def negation2decorator(verbos=True):
+def negation2decorator(args, verbos=True):
     if args.trace == 'fixed':    
         # Trace of length 1
         trace1 = [
@@ -283,13 +388,61 @@ def negation2decorator(verbos=True):
     expriments(traces, ndecorator, [cnode], '!a', args)
 
 
+# Experiment 3 for simple and of atomic propositions
+def and2sequence(args, verbos=True):
+    traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    cnode1 = PropConditionNode('c')
+    cnode2 = PropConditionNode('d')        
+    parll = Parallel('And')
+
+    parll.add_children([cnode1, cnode2])
+    expriments(traces, parll, [cnode1, cnode2], 'c & d', args)
+
+
+# Experiment 4 for simple X and and
+def next2decorator(args, verbos=True):
+    if args.trace == 'fixed':        
+        # Trace of length 1
+        trace1 = [
+            {'a': True, 'c': True, 'd': True}
+        ]
+        # Trace of length 1    
+        trace2 = [
+            {'a': False, 'c': False, 'd': False}        
+        ]    
+        # Trace of length 2
+        trace3 = [
+            {'a': False, 'c': False, 'd': True},                
+            {'a': False, 'c': True, 'd': False}                       
+        ]    
+        # Trace of length 3
+        trace4 = [
+            {'a': False, 'c': True, 'd': False},
+            {'a': False, 'c': False, 'd': False},                      
+            {'a': False, 'c': True, 'd': False}                
+        ]  
+        traces =[trace1, trace2, trace3, trace4]
+    else:
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)                  
+    # traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    # traces = [trace1, trace2, trace3, trace4]
+    cnode1 = PropConditionNode('c')
+    # cnode2 = PropConditionNode('d')        
+    # parll = Parallel('And')
+    # parll.add_children([cnode1, cnode2])
+    # nextd = Next(parll)    
+    nextd = Next(cnode1)
+    expriments(traces, nextd, [cnode1, nextd], '(X c)', args)        
+    # expriments(traces, nextd, [cnode1, nextd], '(X (c & d))', args)    
+
+
 def main(args):
     if args.test == 'P':
         proposition2condition(args)
     elif args.test == '~':
-        negation2decorator()
+        negation2decorator(args)
     elif args.test == '&':
-        and2sequence()
+        and2sequence(args)
     elif args.test == 'X':
         next2decorator(args)
     elif args.test == 'U':
