@@ -460,7 +460,58 @@ def composite2_next_and(args, verbos=True):
     parll.add_children([nextd, cnode2])
     anddec = And(parll)    
 
-    expriments(traces, anddec, [nextd, anddec], '((X c) & d)', args)        
+    expriments(traces, anddec, [nextd, anddec], '((X c) & d)', args)    
+
+
+# Experiment 7 for composite X
+def composite3_next_next(args, verbos=True):
+    traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    cnode1 = PropConditionNode('c')
+    nextd1 = Next(cnode1)        
+    nextd2 = Next(nextd1)
+
+    expriments(traces, nextd2, [nextd2], '(X (X c))', args)            
+
+
+
+# Experiment 8 for composite X and and
+def composite4_next_and(args, verbos=True):
+    if args.trace == 'fixed':        
+        # Trace of length 3
+        trace1 = [
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': True, 'd': True},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}                
+        ]  
+
+        trace2 = [
+            {'a': False, 'b': False, 'c': False, 'd': False},
+            {'a': True, 'b': False, 'c': False, 'd': True},                      
+            {'a': False, 'b': True, 'c': True, 'd': False}                
+        ]  
+
+        traces =[trace1, trace2]
+    else:    
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    cnode1 = PropConditionNode('a')
+    cnode2 = PropConditionNode('b')
+    cnode3 = PropConditionNode('c')
+    cnode4 = PropConditionNode('d')    
+
+    nextc = Next(cnode3)        
+    nextb = Next(cnode2)
+    parll1 = Parallel('And1')        
+    parll1.add_children([nextc, cnode4])
+    and1 = And(parll1)      
+    parll2 = Parallel('And2')        
+    parll2.add_children([cnode1, nextb])
+    and2 = And(parll2)          
+    mainand = Parallel('And3')    
+    mainand.add_children([and1, and2])
+    andmain = And(mainand)              
+    finalnext = Next(andmain)
+
+    expriments(traces, finalnext, [nextc, nextb, finalnext], 'X (((X c) & d) & (a & (X b)))', args)            
 
 
 def main(args):
@@ -482,6 +533,10 @@ def main(args):
         composite1_next_and(args)
     elif args.test == 'C2_X_&':
         composite2_next_and(args)
+    elif args.test == 'C3_X_X':
+        composite3_next_next(args)        
+    elif args.test == 'C4_X_&':
+        composite4_next_and(args)                
 
 
 if __name__ == '__main__':
@@ -489,7 +544,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--test', type=str, choices = [
-            'P', '~', '&', 'X', 'G', 'F', 'C1_X_&', 'C2_X_&'
+            'P', '~', '&', 'X', 'G', 'F', 
+            'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&'
             ])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
