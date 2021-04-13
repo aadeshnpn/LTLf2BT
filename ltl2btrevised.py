@@ -169,7 +169,7 @@ class PropConditionNode(Behaviour):
         # else
         ## return Failure
         # if self.value[self.proposition_symbol]:
-        print('proposition index',self.index, self.trace[self.index][self.proposition_symbol])
+        # print('proposition index',self.index, self.trace[self.index][self.proposition_symbol])
         try:
             if self.trace[self.index][self.proposition_symbol]:        
                 return_value = common.Status.SUCCESS 
@@ -358,10 +358,10 @@ class Globally(Decorator):
         # elif self.decorated.status == common.Status.FAILURE:
         #     self.next_status = common.Status.FAILURE
         #  Repeat until logic for decorator
-        print(self.decorated.status, self.idx)
+        # print(self.decorated.status, self.idx)
         return_value = self.decorated.status
         for j in range(self.idx+1, len(self.trace)):
-            print('from G loop',j, return_value)
+            # print('from G loop',j, return_value)
             if return_value == common.Status.SUCCESS:
                 self.decorated.setup(0, self.trace, j)
                 return_value = self.decorated.update()                
@@ -580,13 +580,49 @@ def globally2decorator(args, verbos=True):
         trace2 = [
             {'a': True}
         ]    
-        # Trace of length 3
+        # Trace of length 2
         trace3 = [
+            {'a': True},
+            {'a': True}        
+        ]            
+        # Trace of length 3
+        trace4 = [
             {'a': True},
             {'a': False},        
             {'a': True}        
         ]    
-        traces =[trace1, trace2, trace3]
+        # Trace of length 4
+        trace5 = [
+            {'a': True},
+            {'a': True},        
+            {'a': True},            
+            {'a': True}        
+        ]            
+        # Trace of length 5
+        trace6 = [
+            {'a': True},
+            {'a': True},        
+            {'a': True},            
+            {'a': False},                        
+            {'a': True}        
+        ]                    
+        # Trace of length 5
+        trace7 = [
+            {'a': True},
+            {'a': True},        
+            {'a': True},            
+            {'a': True},                        
+            {'a': False}        
+        ]    
+        # Trace of length 5
+        trace8 = [
+            {'a': False},
+            {'a': True},        
+            {'a': True},            
+            {'a': True},                        
+            {'a': True}        
+        ]                                    
+        traces =[trace1, trace2, trace3, trace4, trace5, trace6, trace7, trace8]
     else:
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
     
