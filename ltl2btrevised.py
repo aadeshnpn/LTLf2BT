@@ -547,7 +547,6 @@ def composite3_next_next(args, verbos=True):
     expriments(traces, nextd2, [nextd2], '(X (X c))', args)            
 
 
-
 # Experiment 8 for composite X and and
 def composite4_next_and(args, verbos=True):
     if args.trace == 'fixed':        
@@ -695,40 +694,50 @@ def composite2_globally_and_next(args, verbos=True):
     if args.trace == 'fixed':        
         # Trace of length 3
         trace1 = [
-            {'c': True, 'd': True},
-            {'c': True, 'd': False},                      
-            {'c': True, 'd': True}                
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': True, 'd': False},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}                
         ]  
 
         trace2 = [
-            {'c': True, 'd': True},
-            {'c': True, 'd': False},                      
-            {'c': False, 'd': True}              
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': True, 'd': False},                      
+            {'a': True, 'b': True, 'c': False, 'd': True}              
         ]  
 
         trace3 = [
-            {'c': True, 'd': True},
-            {'c': True, 'd': True},                      
-            {'c': True, 'd': True}                
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': True, 'd': True},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}                
         ]  
 
         trace4 = [
-            {'c': True, 'd': True},
-            {'c': False, 'd': False},                      
-            {'c': True, 'd': True}              
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': False, 'd': False},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}              
         ]  
-
         traces =[trace1, trace2, trace3, trace4]
     else:      
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+
     cnode1 = PropConditionNode('c')
     cnode2 = PropConditionNode('d')        
-    parll = Parallel('And')    
-    parll.add_children([cnode1, cnode2])
-    anddec = And(parll)    
-    cnext = Next(anddec)    
-    globallyd = Globally(cnext)    
-    expriments(traces, globallyd, [globallyd], '(G (X(c & d)))', args)    
+    parll1 = Parallel('And1')    
+    parll1.add_children([cnode1, cnode2])
+    anddec1 = And(parll1)    
+    globallyd = Globally(anddec1)   
+
+    cnode3 = PropConditionNode('a')
+    cnode4 = PropConditionNode('b')        
+    parll2 = Parallel('And2')    
+    parll2.add_children([cnode3, cnode4])
+    anddec2 = And(parll2)    
+    globallya = Globally(anddec2)               
+
+    parll3 = Parallel('And3')    
+    parll3.add_children([globallyd, globallya])
+    anddec3 = And(parll3)    
+    expriments(traces, anddec3, [anddec3], '(G (c & d)) & (G (a & b))', args)    
 
 
 def main(args):
