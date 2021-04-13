@@ -75,8 +75,8 @@ def execute_bt(bt, trace, nodes, i=0):
     #       trace -> a trace of lenght m
     #       nodes -> Execution nodes of BT that takes trace as input
     
-    # reset
-    bt.root.reset()
+    # reset with the i value provided so it is consistent
+    bt.root.reset(i)
     # setup_node(nodes, trace[k])
     setup_node(nodes, trace, i)  
     bt.tick()
@@ -157,8 +157,8 @@ class PropConditionNode(Behaviour):
         """Everytime initialization. Not required for now."""
         pass
 
-    def reset(self):
-        self.index = 0
+    def reset(self, i=0):
+        self.index = i
 
     def increment(self):
         self.index += 1
@@ -204,13 +204,14 @@ class Negation(Decorator):
     def setup(self, timeout, trace, i=0):
         self.decorated.setup(0, trace, i)
 
-    def reset(self):
-        for child in self.children:
-            child.reset()
-    
-    def increment(self):
-        for child in self.children:
-            child.increment()
+    def reset(self, i=0):
+        def reset(children, i):
+            for child in children:
+                try:
+                    child.reset(i)
+                except AttributeError:
+                    reset(child.children, i)
+        reset(self.children, i)            
     
     def update(self):
         """
@@ -245,14 +246,14 @@ class And(Decorator):
         """
         super(And, self).__init__(name=name, child=child)
 
-    def reset(self):
-        def reset(children):
+    def reset(self, i=0):
+        def reset(children, i):
             for child in children:
                 try:
-                    child.reset()
+                    child.reset(i)
                 except AttributeError:
-                    reset(child.children)
-        reset(self.children)      
+                    reset(child.children, i)
+        reset(self.children, i)    
 
     def increment(self):
         for child in self.children:
@@ -302,11 +303,16 @@ class Next(Decorator):
         # self.pchilds = pchilds
         # self.trace = trace
 
-    def reset(self):
+    def reset(self, i=0):
         self.next_status = None
-        self.idx = 0
-        for child in self.children:
-            child.reset()
+        self.idx = i
+        def reset(children, i):
+            for child in children:
+                try:
+                    child.reset(i)
+                except AttributeError:
+                    reset(child.children, i)
+        reset(self.children, i)    
     
     def setup(self, timeout, trace, i=0):
         self.idx = i
@@ -345,11 +351,16 @@ class Globally(Decorator):
         super(Globally, self).__init__(name=name, child=child)
         self.idx = 0
 
-    def reset(self):
-        self.idx = 0
-        for child in self.children:
-            child.reset()
-    
+    def reset(self, i=0):
+        self.idx = i
+        def reset(children, i):
+            for child in children:
+                try:
+                    child.reset(i)
+                except AttributeError:
+                    reset(child.children, i)
+        reset(self.children, i)            
+
     def setup(self, timeout, trace, i=0):
         self.idx = i
         self.trace = trace   
@@ -391,10 +402,15 @@ class Finally(Decorator):
         super(Finally, self).__init__(name=name, child=child)
         self.idx = 0
 
-    def reset(self):
-        self.idx = 0
-        for child in self.children:
-            child.reset()
+    def reset(self, i=0):
+        self.idx = i
+        def reset(children, i):
+            for child in children:
+                try:
+                    child.reset(i)
+                except AttributeError:
+                    reset(child.children, i)
+        reset(self.children, i)    
     
     def setup(self, timeout, trace, i=0):
         self.idx = i
@@ -436,15 +452,15 @@ class Until(Decorator):
         super(Until, self).__init__(name=name, child=child)
         self.idx = 0
 
-    def reset(self):
-        self.idx = 0
-        def reset(children):
+    def reset(self, i=0):
+        self.idx = i
+        def reset(children, i):
             for child in children:
                 try:
-                    child.reset()
+                    child.reset(i)
                 except AttributeError:
-                    reset(child.children)  
-        reset(self.children)      
+                    reset(child.children, i)  
+        reset(self.children, i)      
 
     def setup(self, timeout, trace, i=0):
         self.idx = i
@@ -458,12 +474,13 @@ class Until(Decorator):
 
         """        
         #  Repeat until logic for decorator
+        # print('Until', self.idx, self.decorated.status)        
         return_value = self.decorated.status
         if return_value == common.Status.SUCCESS:
             return common.Status.SUCCESS
         else: 
-            # for k in range(0, self.j-1):            
-            for i in range(1, len(self.trace)):
+            # print('inside Until', self.idx, len(self.trace[self.idx:]))                            
+            for i in range(self.idx+1, len(self.trace)):
                 self.decorated.setup(0, self.trace, i)                
                 return_value = list(self.decorated.tick())[-1].update()                                             
                 if return_value == common.Status.SUCCESS:
@@ -490,16 +507,16 @@ class UntilB(Decorator):
         self.idx = 0
         self.j = -1
 
-    def reset(self):
-        self.idx = 0
-        self.j = -1
-        def reset(children):
+    def reset(self, i=0):
+        self.idx = i
+        self.j = i-1
+        def reset(children, i):
             for child in children:
                 try:
-                    child.reset()
+                    child.reset(i)
                 except AttributeError:
-                    reset(child.children)  
-        reset(self.children)        
+                    reset(child.children, i)  
+        reset(self.children, i)        
     
     def setup(self, timeout, trace, i=0):
         self.idx = i
@@ -513,6 +530,7 @@ class UntilB(Decorator):
 
         """        
         #  Repeat until logic for decorator
+        # print('until b', self.idx, self.decorated.status)
         return_value = self.decorated.status
         self.j += 1
         return return_value    
@@ -536,15 +554,15 @@ class UntilA(Decorator):
         super(UntilA, self).__init__(name=name, child=child)
         self.idx = 0
 
-    def reset(self):
-        self.idx = 0
-        def reset(children):
+    def reset(self, i=0):
+        self.idx = i
+        def reset(children, i):
             for child in children:
                 try:
-                    child.reset()
+                    child.reset(i)
                 except AttributeError:
-                    reset(child.children)  
-        reset(self.children) 
+                    reset(child.children, i)  
+        reset(self.children, i) 
     
     def setup(self, timeout, trace, i=0):
         self.idx = i
@@ -563,10 +581,11 @@ class UntilA(Decorator):
 
         j = self.parent.children[0].j
         # print(j)
-        if (j ==0 and self.parent.children[0].status == common.Status.SUCCESS):
+        if (j == self.parent.parent.parent.idx and self.parent.children[0].status == common.Status.SUCCESS):
             return_value = common.Status.SUCCESS
-        elif (j > 0 and self.parent.children[0].status == common.Status.SUCCESS):
-            for k in range(0, j):
+        elif (j > self.parent.parent.parent.idx and self.parent.children[0].status == common.Status.SUCCESS):
+            # print(self.parent.parent.parent)
+            for k in range(self.parent.parent.parent.idx, j):
                 self.decorated.reset()
                 self.decorated.setup(0, self.trace, k)                
                 return_value = list(self.decorated.tick())[-1].update()                                             
@@ -585,8 +604,8 @@ def expriments(traces, btroot, cnodes, formula, args, i=0, verbos=True):
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
     for trace in traces:
-        # i = 0 if args.trace =='fixed' else np.random.randint(0, len(trace))        
-        i = 0
+        i = 0 if args.trace =='fixed' else np.random.randint(0, len(trace))        
+        # i = 0
         if verbos:
             print('--------------')
             print('Experiment no: ', expno, ',i=',i)
@@ -1235,6 +1254,7 @@ def until2subtree(args, verbos=True):
         ]            
 
         traces =[t1, t2, t3, t4, t0] + t5 + t6 + t7 + t8 + t9
+        # traces = t6 + t7 + t8 + t9
     else:
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
     
