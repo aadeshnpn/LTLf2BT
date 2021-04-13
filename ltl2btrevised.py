@@ -843,6 +843,7 @@ def finally2decorator(args, verbos=True):
     expriments(traces, fdecorator, [fdecorator], 'F a', args)
 
 
+# Experiment 13 for simple finally operator
 def composite1_finally_and(args, verbos=True):
     if args.trace == 'fixed':    
         # Trace of length 1
@@ -884,6 +885,58 @@ def composite1_finally_and(args, verbos=True):
     expriments(traces, fdecorator, [fdecorator], 'F (a & b)', args)
 
 
+
+# Experiment 14 for simple globally operator
+def composite2_finally_and_next(args, verbos=True):
+    if args.trace == 'fixed':        
+        # Trace of length 3
+        trace1 = [
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': True, 'd': False},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}                
+        ]  
+
+        trace2 = [
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': True, 'd': False},                      
+            {'a': True, 'b': True, 'c': False, 'd': True}              
+        ]  
+
+        trace3 = [
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': True, 'd': True},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}                
+        ]  
+
+        trace4 = [
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': False, 'd': False},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}              
+        ]  
+        traces = [trace1, trace2, trace3, trace4]
+    else:      
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+
+    cnode1 = PropConditionNode('c')
+    cnode2 = PropConditionNode('d')        
+    parll1 = Parallel('And1')    
+    parll1.add_children([cnode1, cnode2])
+    anddec1 = And(parll1)    
+    globallyd = Finally(anddec1)   
+
+    cnode3 = PropConditionNode('a')
+    cnode4 = PropConditionNode('b')        
+    parll2 = Parallel('And2')    
+    parll2.add_children([cnode3, cnode4])
+    anddec2 = And(parll2)    
+    globallya = Finally(anddec2)               
+
+    parll3 = Parallel('And3')    
+    parll3.add_children([globallyd, globallya])
+    anddec3 = And(parll3)    
+    expriments(traces, anddec3, [anddec3], '(F (c & d)) & (F (a & b))', args)    
+
+
 def main(args):
     if args.test == 'P':
         proposition2condition(args)
@@ -913,6 +966,8 @@ def main(args):
         composite2_globally_and_next(args)
     elif args.test == 'C1_F_&':
         composite1_finally_and(args)
+    elif args.test == 'C2_F_&_X':
+        composite2_finally_and_next(args)        
 
 
 if __name__ == '__main__':
@@ -921,7 +976,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--test', type=str, choices = [
             'P', '~', '&', 'X', 'G', 'F', 
-            'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&', 'C1_G_&', 'C2_G_&_X', 'C1_F_&'
+            'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&', 'C1_G_&', 'C2_G_&_X', 'C1_F_&', 'C2_F_&_X'
             ])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
