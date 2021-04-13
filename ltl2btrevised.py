@@ -336,11 +336,9 @@ class Globally(Decorator):
         """
         super(Globally, self).__init__(name=name, child=child)
         self.idx = 0
-        self.repeat_until_failure = True
 
     def reset(self):
         self.idx = 0
-        self.repeat_until_failure = True        
         for child in self.children:
             child.reset()
     
@@ -354,24 +352,62 @@ class Globally(Decorator):
         Main function that is called when BT ticks.
         This returns the Globally operator status
         """        
-        # This give access to the child class of decorator class
-        # if self.decorated.status == common.Status.SUCCESS:
-        #     self.next_status = common.Status.SUCCESS
-        # elif self.decorated.status == common.Status.FAILURE:
-        #     self.next_status = common.Status.FAILURE
         #  Repeat until logic for decorator
-        # print('G',self.decorated.status, self.idx)
         return_value = self.decorated.status
         for j in range(self.idx+1, len(self.trace)):
-            # print('from G loop',j, return_value)
             if return_value == common.Status.SUCCESS:
                 self.decorated.setup(0, self.trace, j)
                 return_value = list(self.decorated.tick())[-1].update() 
-                # print('generator list', return_value)
             elif return_value == common.Status.FAILURE:
                 break                
             
         return return_value
+
+
+
+# Just a simple decorator node that implements Globally LTLf operator
+class Finally(Decorator):
+    """Decorator node for the Finally operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Globally LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Finally, self).__init__(name=name, child=child)
+        self.idx = 0
+
+    def reset(self):
+        self.idx = 0
+        for child in self.children:
+            child.reset()
+    
+    def setup(self, timeout, trace, i=0):
+        self.idx = i
+        self.trace = trace   
+        self.decorated.setup(0, self.trace, self.idx)
+    
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Finally operator status
+        """        
+        #  Repeat until logic for decorator
+        return_value = self.decorated.status
+        for j in range(self.idx+1, len(self.trace)):
+            if return_value == common.Status.SUCCESS:
+                break
+            elif return_value == common.Status.FAILURE:
+                self.decorated.setup(0, self.trace, j)
+                return_value = list(self.decorated.tick())[-1].update()                 
+            
+        return return_value        
 
 
 ## Experiments to test each LTLf operator and its BT sub-tree
@@ -651,6 +687,7 @@ def globally2decorator(args, verbos=True):
     expriments(traces, gdecorator, [gdecorator], 'G a', args)
 
 
+# Experiment 10 for simple globally operator
 def composite1_globally_and(args, verbos=True):
     if args.trace == 'fixed':        
         # Trace of length 3
@@ -690,6 +727,7 @@ def composite1_globally_and(args, verbos=True):
     expriments(traces, globallyd, [globallyd], '(G (c & d))', args)    
 
 
+# Experiment 11 for simple globally operator
 def composite2_globally_and_next(args, verbos=True):
     if args.trace == 'fixed':        
         # Trace of length 3
@@ -740,6 +778,112 @@ def composite2_globally_and_next(args, verbos=True):
     expriments(traces, anddec3, [anddec3], '(G (c & d)) & (G (a & b))', args)    
 
 
+
+# Experiment 12 for simple finally operator
+def finally2decorator(args, verbos=True):
+    if args.trace == 'fixed':    
+        # Trace of length 1
+        trace1 = [
+            {'a': False}
+        ]
+        # Trace of length 1    
+        trace2 = [
+            {'a': True}
+        ]    
+        # Trace of length 2
+        trace3 = [
+            {'a': False},
+            {'a': True}        
+        ]            
+        # Trace of length 3
+        trace4 = [
+            {'a': False},
+            {'a': False},        
+            {'a': True}        
+        ]    
+        # Trace of length 4
+        trace5 = [
+            {'a': False},
+            {'a': True},        
+            {'a': False},            
+            {'a': False}        
+        ]            
+        # Trace of length 5
+        trace6 = [
+            {'a': False},
+            {'a': False},        
+            {'a': False},            
+            {'a': False},                        
+            {'a': False}        
+        ]                    
+        # Trace of length 5
+        trace7 = [
+            {'a': False},
+            {'a': False},        
+            {'a': False},            
+            {'a': False},                        
+            {'a': True}        
+        ]    
+        # Trace of length 5
+        trace8 = [
+            {'a': False},
+            {'a': True},        
+            {'a': True},            
+            {'a': True},                        
+            {'a': True}        
+        ]                                    
+        traces =[trace1, trace2, trace3, trace4, trace5, trace6, trace7, trace8]
+    else:
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    
+    # Experiment variables
+    cnode = PropConditionNode('a')
+    # ndecorator = Negation(cnode, 'Invert')  
+    fdecorator = Finally(cnode, 'Finally')
+    expriments(traces, fdecorator, [fdecorator], 'F a', args)
+
+
+def composite1_finally_and(args, verbos=True):
+    if args.trace == 'fixed':    
+        # Trace of length 1
+        trace1 = [
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': True, 'd': False},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}                
+        ]  
+
+        trace2 = [
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': True, 'd': False},                      
+            {'a': True, 'b': True, 'c': False, 'd': True}              
+        ]  
+
+        trace3 = [
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': True, 'd': True},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}                
+        ]  
+
+        trace4 = [
+            {'a': True, 'b': True, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': False, 'd': False},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}              
+        ]                                 
+        traces =[trace1, trace2, trace3, trace4]
+    else:
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    
+    # Experiment variables
+    cnode1 = PropConditionNode('a')
+    cnode2 = PropConditionNode('b')    
+    parll2 = Parallel('And')    
+    parll2.add_children([cnode1, cnode2])
+    anddec2 = And(parll2)    
+
+    fdecorator = Finally(anddec2, 'Finally')
+    expriments(traces, fdecorator, [fdecorator], 'F (a & b)', args)
+
+
 def main(args):
     if args.test == 'P':
         proposition2condition(args)
@@ -767,6 +911,8 @@ def main(args):
         composite1_globally_and(args)
     elif args.test == 'C2_G_&_X':
         composite2_globally_and_next(args)
+    elif args.test == 'C1_F_&':
+        composite1_finally_and(args)
 
 
 if __name__ == '__main__':
@@ -775,7 +921,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--test', type=str, choices = [
             'P', '~', '&', 'X', 'G', 'F', 
-            'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&', 'C1_G_&', 'C2_G_&_X'
+            'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&', 'C1_G_&', 'C2_G_&_X', 'C1_F_&'
             ])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
