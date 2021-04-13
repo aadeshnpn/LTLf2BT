@@ -169,7 +169,7 @@ class PropConditionNode(Behaviour):
         # else
         ## return Failure
         # if self.value[self.proposition_symbol]:
-        # print('proposition index',self.index, self.trace[self.index][self.proposition_symbol])
+        # print('proposition index',self.name, self.index, self.trace[self.index][self.proposition_symbol])
         try:
             if self.trace[self.index][self.proposition_symbol]:        
                 return_value = common.Status.SUCCESS 
@@ -255,6 +255,7 @@ class And(Decorator):
         self.trace = trace
         # Find all the child nodes and call setup
         childs = self.decorated.children
+        # print('from And decorator setup', i)
         for child in childs:
             child.setup(0, trace, i)
 
@@ -268,6 +269,7 @@ class And(Decorator):
         # else
         ## return Success
         # This give access to the child class of decorator class
+        # print('and',self.idx, self.decorated.status)
         return self.decorated.status
 
 
@@ -350,7 +352,7 @@ class Globally(Decorator):
     def update(self):
         """
         Main function that is called when BT ticks.
-        This returns the Next operator status
+        This returns the Globally operator status
         """        
         # This give access to the child class of decorator class
         # if self.decorated.status == common.Status.SUCCESS:
@@ -358,13 +360,14 @@ class Globally(Decorator):
         # elif self.decorated.status == common.Status.FAILURE:
         #     self.next_status = common.Status.FAILURE
         #  Repeat until logic for decorator
-        # print(self.decorated.status, self.idx)
+        # print('G',self.decorated.status, self.idx)
         return_value = self.decorated.status
         for j in range(self.idx+1, len(self.trace)):
             # print('from G loop',j, return_value)
             if return_value == common.Status.SUCCESS:
                 self.decorated.setup(0, self.trace, j)
-                return_value = self.decorated.update()                
+                return_value = list(self.decorated.tick())[-1].update() 
+                # print('generator list', return_value)
             elif return_value == common.Status.FAILURE:
                 break                
             
@@ -495,7 +498,23 @@ def next2decorator(args, verbos=True):
 
 # Experiment 5 for simple X and &
 def composite1_next_and(args, verbos=True):
-    traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    if args.trace == 'fixed':        
+        # Trace of length 3
+        trace1 = [
+            {'c': False, 'd': False},
+            {'c': True, 'd': True},                      
+            {'c': True, 'd': True}                
+        ]  
+
+        trace2 = [
+            {'c': False, 'd': False},
+            {'c': False, 'd': True},                      
+            {'c': True, 'd': False}                
+        ]  
+
+        traces =[trace1, trace2]
+    else:     
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
     cnode1 = PropConditionNode('c')
     cnode2 = PropConditionNode('d')        
     parll = Parallel('And')    
@@ -633,6 +652,85 @@ def globally2decorator(args, verbos=True):
     expriments(traces, gdecorator, [gdecorator], 'G a', args)
 
 
+def composite1_globally_and(args, verbos=True):
+    if args.trace == 'fixed':        
+        # Trace of length 3
+        trace1 = [
+            {'c': True, 'd': True},
+            {'c': True, 'd': False},                      
+            {'c': True, 'd': True}                
+        ]  
+
+        trace2 = [
+            {'c': True, 'd': True},
+            {'c': True, 'd': False},                      
+            {'c': False, 'd': True}              
+        ]  
+
+        trace3 = [
+            {'c': True, 'd': True},
+            {'c': True, 'd': True},                      
+            {'c': True, 'd': True}                
+        ]  
+
+        trace4 = [
+            {'c': True, 'd': True},
+            {'c': False, 'd': False},                      
+            {'c': True, 'd': True}              
+        ]  
+
+        traces =[trace1, trace2, trace3, trace4]
+    else:      
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    cnode1 = PropConditionNode('c')
+    cnode2 = PropConditionNode('d')        
+    parll = Parallel('And')    
+    parll.add_children([cnode1, cnode2])
+    anddec = And(parll)    
+    globallyd = Globally(anddec)    
+    expriments(traces, globallyd, [globallyd], '(G (c & d))', args)    
+
+
+def composite2_globally_and_next(args, verbos=True):
+    if args.trace == 'fixed':        
+        # Trace of length 3
+        trace1 = [
+            {'c': True, 'd': True},
+            {'c': True, 'd': False},                      
+            {'c': True, 'd': True}                
+        ]  
+
+        trace2 = [
+            {'c': True, 'd': True},
+            {'c': True, 'd': False},                      
+            {'c': False, 'd': True}              
+        ]  
+
+        trace3 = [
+            {'c': True, 'd': True},
+            {'c': True, 'd': True},                      
+            {'c': True, 'd': True}                
+        ]  
+
+        trace4 = [
+            {'c': True, 'd': True},
+            {'c': False, 'd': False},                      
+            {'c': True, 'd': True}              
+        ]  
+
+        traces =[trace1, trace2, trace3, trace4]
+    else:      
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    cnode1 = PropConditionNode('c')
+    cnode2 = PropConditionNode('d')        
+    parll = Parallel('And')    
+    parll.add_children([cnode1, cnode2])
+    anddec = And(parll)    
+    cnext = Next(anddec)    
+    globallyd = Globally(cnext)    
+    expriments(traces, globallyd, [globallyd], '(G (X(c & d)))', args)    
+
+
 def main(args):
     if args.test == 'P':
         proposition2condition(args)
@@ -656,6 +754,10 @@ def main(args):
         composite3_next_next(args)        
     elif args.test == 'C4_X_&':
         composite4_next_and(args)                
+    elif args.test == 'C1_G_&':
+        composite1_globally_and(args)
+    elif args.test == 'C2_G_&_X':
+        composite2_globally_and_next(args)
 
 
 if __name__ == '__main__':
@@ -664,7 +766,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--test', type=str, choices = [
             'P', '~', '&', 'X', 'G', 'F', 
-            'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&'
+            'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&', 'C1_G_&', 'C2_G_&_X'
             ])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
