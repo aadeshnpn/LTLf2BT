@@ -74,9 +74,11 @@ def execute_bt(bt, trace, nodes, i=0):
     # Args: bt -> BT to tick
     #       trace -> a trace of lenght m
     #       nodes -> Execution nodes of BT that takes trace as input
-
+    
+    # reset
+    bt.root.reset()
     # setup_node(nodes, trace[k])
-    setup_node(nodes, trace, i)        
+    setup_node(nodes, trace, i)  
     bt.tick()
     return bt.root.status
 
@@ -91,8 +93,9 @@ def execute_both_bt_ltlf(subtree, formula, trace, nodes, i=0, verbos=True):
     # Trace of length 1
 
     # Create a BT from the subtree
-    root = BehaviourTree(subtree)   
+    root = BehaviourTree(subtree)       
     # print(py_trees.display.ascii_tree(root.root))
+    
     # Creating a LTLf parser object
     parser = LTLfParser()
     # Parsed formula
@@ -201,7 +204,7 @@ class Negation(Decorator):
     def setup(self, timeout, trace, i=0):
         self.decorated.setup(0, trace, i)
 
-    def reset():
+    def reset(self):
         for child in self.children:
             child.reset()
     
@@ -242,10 +245,15 @@ class And(Decorator):
         """
         super(And, self).__init__(name=name, child=child)
 
-    def reset():
-        for child in self.children:
-            child.reset()
-    
+    def reset(self):
+        def reset(children):
+            for child in children:
+                try:
+                    child.reset()
+                except AttributeError:
+                    reset(child.children)
+        reset(self.children)      
+
     def increment(self):
         for child in self.children:
             child.increment()
@@ -365,12 +373,12 @@ class Globally(Decorator):
 
 
 
-# Just a simple decorator node that implements Globally LTLf operator
+# Just a simple decorator node that implements Finally LTLf operator
 class Finally(Decorator):
     """Decorator node for the Finally operator.
 
     Inherits the Decorator class from py_trees. This
-    behavior implements the Globally LTLf operator.
+    behavior implements the Finally LTLf operator.
     """
     def __init__(self, child, name=common.Name.AUTO_GENERATED):
         """
@@ -410,6 +418,165 @@ class Finally(Decorator):
         return return_value        
 
 
+# Just a simple decorator node that implements Until LTLf operator
+class Until(Decorator):
+    """Decorator node for the Until operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Until LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Until, self).__init__(name=name, child=child)
+        self.idx = 0
+
+    def reset(self):
+        self.idx = 0
+        def reset(children):
+            for child in children:
+                try:
+                    child.reset()
+                except AttributeError:
+                    reset(child.children)  
+        reset(self.children)      
+
+    def setup(self, timeout, trace, i=0):
+        self.idx = i
+        self.trace = trace   
+        self.decorated.setup(0, self.trace, self.idx)
+    
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Until operator status
+
+        """        
+        #  Repeat until logic for decorator
+        return_value = self.decorated.status
+        if return_value == common.Status.SUCCESS:
+            return common.Status.SUCCESS
+        else: 
+            # for k in range(0, self.j-1):            
+            for i in range(1, len(self.trace)):
+                self.decorated.setup(0, self.trace, i)                
+                return_value = list(self.decorated.tick())[-1].update()                                             
+                if return_value == common.Status.SUCCESS:
+                    break
+        return return_value    
+
+
+# Just a simple decorator node that implements Until LTLf operator
+class UntilB(Decorator):
+    """Decorator node for the Until operator for the left sub-tree.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Until LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(UntilB, self).__init__(name=name, child=child)
+        self.idx = 0
+        self.j = -1
+
+    def reset(self):
+        self.idx = 0
+        self.j = -1
+        def reset(children):
+            for child in children:
+                try:
+                    child.reset()
+                except AttributeError:
+                    reset(child.children)  
+        reset(self.children)        
+    
+    def setup(self, timeout, trace, i=0):
+        self.idx = i
+        self.trace = trace   
+        self.decorated.setup(0, self.trace, self.idx)
+    
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Until operator status
+
+        """        
+        #  Repeat until logic for decorator
+        return_value = self.decorated.status
+        self.j += 1
+        return return_value    
+
+
+# Just a simple decorator node that implements Until LTLf operator
+class UntilA(Decorator):
+    """Decorator node for the Until operator for the right sub-tree.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Until LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(UntilA, self).__init__(name=name, child=child)
+        self.idx = 0
+
+    def reset(self):
+        self.idx = 0
+        def reset(children):
+            for child in children:
+                try:
+                    child.reset()
+                except AttributeError:
+                    reset(child.children)  
+        reset(self.children) 
+    
+    def setup(self, timeout, trace, i=0):
+        self.idx = i
+        self.trace = trace   
+        self.decorated.setup(0, self.trace, self.idx)
+    
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Until operator status
+
+        """        
+        #  Repeat until logic for decorator
+        # return_value = self.decorated.status
+        # self.j += 1
+
+        j = self.parent.children[0].j
+        # print(j)
+        if (j ==0 and self.parent.children[0].status == common.Status.SUCCESS):
+            return_value = common.Status.SUCCESS
+        elif (j > 0 and self.parent.children[0].status == common.Status.SUCCESS):
+            for k in range(0, j):
+                self.decorated.reset()
+                self.decorated.setup(0, self.trace, k)                
+                return_value = list(self.decorated.tick())[-1].update()                                             
+                if return_value == common.Status.FAILURE:
+                    break
+        else:
+            return_value = common.Status.FAILURE
+        return return_value 
+
+
 ## Experiments to test each LTLf operator and its BT sub-tree
 
 def expriments(traces, btroot, cnodes, formula, args, i=0, verbos=True):
@@ -418,7 +585,8 @@ def expriments(traces, btroot, cnodes, formula, args, i=0, verbos=True):
     # It is important to create a new execution object for each trace
     # as BT are state machine. 
     for trace in traces:
-        i = 0 if args.trace =='fixed' else np.random.randint(0, len(trace))        
+        # i = 0 if args.trace =='fixed' else np.random.randint(0, len(trace))        
+        i = 0
         if verbos:
             print('--------------')
             print('Experiment no: ', expno, ',i=',i)
@@ -937,6 +1105,151 @@ def composite2_finally_and_next(args, verbos=True):
     expriments(traces, anddec3, [anddec3], '(F (c & d)) & (F (a & b))', args)    
 
 
+# Experiment 15 for simple finally operator
+def until2subtree(args, verbos=True):
+    if args.trace == 'fixed':    
+        # Trace of length 1
+        t1 = [{'a': True, 'b': True}]
+        t2 = [{'a': True, 'b': False}]        
+        t3 = [{'a': False, 'b': True}]        
+        t4 = [{'a': False, 'b': False}]        
+        t0 = [
+            {'a': True, 'b': False},
+            {'a': True, 'b': True},           
+            {'a': False, 'b': False}            
+            ]  
+
+        t5 = [ 
+             [t1[0], t1[0]],
+             [t1[0], t2[0]],   
+             [t1[0], t3[0]],        
+             [t1[0], t4[0]],
+             [t2[0], t1[0]],
+             [t2[0], t2[0]],   
+             [t2[0], t3[0]],        
+             [t2[0], t4[0]],
+             [t3[0], t1[0]],
+             [t3[0], t2[0]],   
+             [t3[0], t3[0]],        
+             [t3[0], t4[0]],
+             [t4[0], t1[0]],
+             [t4[0], t2[0]],   
+             [t4[0], t3[0]],        
+             [t4[0], t4[0]]
+             ]    
+
+        t6 = [ 
+            [t1[0], t1[0], t1[0]],
+            [t1[0], t1[0], t2[0]],   
+            [t1[0], t1[0], t3[0]],        
+            [t1[0], t1[0], t4[0]],
+
+            [t1[0], t2[0], t1[0]],
+            [t1[0], t2[0], t2[0]],   
+            [t1[0], t2[0], t3[0]],        
+            [t1[0], t2[0], t4[0]],         
+
+
+            [t1[0], t3[0], t1[0]],
+            [t1[0], t3[0], t2[0]],   
+            [t1[0], t3[0], t3[0]],        
+            [t1[0], t3[0], t4[0]],         
+
+
+            [t1[0], t4[0], t1[0]],
+            [t1[0], t4[0], t2[0]],   
+            [t1[0], t4[0], t3[0]],        
+            [t1[0], t4[0], t4[0]]
+        ]
+
+        t7 = [ 
+            [t2[0], t2[0], t1[0]],
+            [t2[0], t2[0], t2[0]],   
+            [t2[0], t2[0], t3[0]],        
+            [t2[0], t2[0], t4[0]],
+
+            [t2[0], t3[0], t1[0]],
+            [t2[0], t3[0], t2[0]],   
+            [t2[0], t3[0], t3[0]],        
+            [t2[0], t3[0], t4[0]],         
+
+
+            [t2[0], t4[0], t1[0]],
+            [t2[0], t4[0], t2[0]],   
+            [t2[0], t4[0], t3[0]],        
+            [t2[0], t4[0], t4[0]],         
+
+
+            [t2[0], t1[0], t1[0]],
+            [t2[0], t1[0], t2[0]],   
+            [t2[0], t1[0], t3[0]],        
+            [t2[0], t1[0], t4[0]]
+        ]    
+
+        t8 = [ 
+            [t3[0], t3[0], t1[0]],
+            [t3[0], t3[0], t2[0]],   
+            [t3[0], t3[0], t3[0]],        
+            [t3[0], t3[0], t4[0]],
+
+            [t3[0], t4[0], t1[0]],
+            [t3[0], t4[0], t2[0]],   
+            [t3[0], t4[0], t3[0]],        
+            [t3[0], t4[0], t4[0]],         
+
+
+            [t3[0], t1[0], t1[0]],
+            [t3[0], t1[0], t2[0]],   
+            [t3[0], t1[0], t3[0]],        
+            [t3[0], t1[0], t4[0]],         
+
+
+            [t3[0], t2[0], t1[0]],
+            [t3[0], t2[0], t2[0]],   
+            [t3[0], t2[0], t3[0]],        
+            [t3[0], t2[0], t4[0]]
+        ]     
+
+        t9 = [ 
+            [t4[0], t4[0], t1[0]],
+            [t4[0], t4[0], t2[0]],   
+            [t4[0], t4[0], t3[0]],        
+            [t4[0], t4[0], t4[0]],
+
+            [t4[0], t1[0], t1[0]],
+            [t4[0], t1[0], t2[0]],   
+            [t4[0], t1[0], t3[0]],        
+            [t4[0], t1[0], t4[0]],         
+
+
+            [t4[0], t2[0], t1[0]],
+            [t4[0], t2[0], t2[0]],   
+            [t4[0], t2[0], t3[0]],        
+            [t4[0], t2[0], t4[0]],         
+
+
+            [t4[0], t3[0], t1[0]],
+            [t4[0], t3[0], t2[0]],   
+            [t4[0], t3[0], t3[0]],        
+            [t4[0], t3[0], t4[0]]
+        ]            
+
+        traces =[t1, t2, t3, t4, t0] + t5 + t6 + t7 + t8 + t9
+    else:
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    
+    # Experiment variables
+    cnode1 = PropConditionNode('a')
+    cnode2 = PropConditionNode('b')    
+    parll2 = Sequence('And')    
+    untila = UntilA(cnode1)
+    untilb = UntilB(cnode2)
+    parll2.add_children([untilb, untila])
+    anddec2 = And(parll2)    
+    until = Until(anddec2)
+    expriments(traces, until, [until], '(a U b)', args)
+
+
 def main(args):
     if args.test == 'P':
         proposition2condition(args)
@@ -975,8 +1288,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--test', type=str, choices = [
-            'P', '~', '&', 'X', 'G', 'F', 
-            'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&', 'C1_G_&', 'C2_G_&_X', 'C1_F_&', 'C2_F_&_X'
+            'P', '~', '&', 'X', 'G', 'F', 'U',
+            'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&', 
+            'C1_G_&', 'C2_G_&_X', 'C1_F_&', 'C2_F_&_X'
             ])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
