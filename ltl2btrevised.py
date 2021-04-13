@@ -479,8 +479,8 @@ class Until(Decorator):
         if return_value == common.Status.SUCCESS:
             return common.Status.SUCCESS
         else: 
-            # print('inside Until', self.idx, len(self.trace[self.idx:]))                            
             for i in range(self.idx+1, len(self.trace)):
+                # print('inside Until', self.name, i)                                            
                 self.decorated.setup(0, self.trace, i)                
                 return_value = list(self.decorated.tick())[-1].update()                                             
                 if return_value == common.Status.SUCCESS:
@@ -510,6 +510,7 @@ class UntilB(Decorator):
     def reset(self, i=0):
         self.idx = i
         self.j = i-1
+        # print('resset from until b', self.name, i)
         def reset(children, i):
             for child in children:
                 try:
@@ -530,7 +531,7 @@ class UntilB(Decorator):
 
         """        
         #  Repeat until logic for decorator
-        # print('until b', self.idx, self.decorated.status)
+        # print('until b', self.name, self.idx, self.decorated.status)
         return_value = self.decorated.status
         self.j += 1
         return return_value    
@@ -580,13 +581,13 @@ class UntilA(Decorator):
         # self.j += 1
 
         j = self.parent.children[0].j
-        # print(j)
+        # print('print until a', self.name, j)
         if (j == self.parent.parent.parent.idx and self.parent.children[0].status == common.Status.SUCCESS):
             return_value = common.Status.SUCCESS
         elif (j > self.parent.parent.parent.idx and self.parent.children[0].status == common.Status.SUCCESS):
             # print(self.parent.parent.parent)
             for k in range(self.parent.parent.parent.idx, j):
-                self.decorated.reset()
+                self.decorated.reset(k)
                 self.decorated.setup(0, self.trace, k)                
                 return_value = list(self.decorated.tick())[-1].update()                                             
                 if return_value == common.Status.FAILURE:
@@ -1261,13 +1262,73 @@ def until2subtree(args, verbos=True):
     # Experiment variables
     cnode1 = PropConditionNode('a')
     cnode2 = PropConditionNode('b')    
-    parll2 = Sequence('And')    
+    parll2 = Sequence('Seq')    
     untila = UntilA(cnode1)
     untilb = UntilB(cnode2)
     parll2.add_children([untilb, untila])
     anddec2 = And(parll2)    
     until = Until(anddec2)
     expriments(traces, until, [until], '(a U b)', args)
+
+
+def composite1_until_until(args, verbos=True):
+    if args.trace == 'fixed':
+        # Trace of length 3
+        trace1 = [
+            {'a': True, 'b': False, 'c': False, 'd': True},
+            {'a': True, 'b': True, 'c': False, 'd': False},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}                
+        ]  
+
+        trace2 = [
+            {'a': False, 'b': False, 'c': False, 'd': True},
+            {'a': True, 'b': False, 'c': False, 'd': False},                      
+            {'a': True, 'b': True, 'c': False, 'd': True}              
+        ]  
+
+        trace3 = [
+            {'a': False, 'b': False, 'c': False, 'd': True},
+            {'a': False, 'b': True, 'c': True, 'd': True},                      
+            {'a': True, 'b': False, 'c': True, 'd': True}                
+        ]  
+
+        trace4 = [
+            {'a': True, 'b': False, 'c': False, 'd': True},
+            {'a': True, 'b': True, 'c': False, 'd': False},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}     
+        ]
+
+        trace5 = [
+            {'a': False, 'b': True, 'c': False, 'd': True},
+            {'a': False, 'b': True, 'c': False, 'd': False},                      
+            {'a': True, 'b': False, 'c': True, 'd': True}     
+        ]
+        traces = [trace1, trace2, trace3, trace4, trace5]
+        # traces = [trace5]
+    else:
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    
+    # Experiment variables
+    cnode1 = PropConditionNode('a')
+    cnode2 = PropConditionNode('b')    
+
+    parll2 = Sequence('Seq')    
+    untila = UntilA(cnode1, name='A')
+    untilb = UntilB(cnode2, name='B')
+    parll2.add_children([untilb, untila])
+    anddec2 = And(parll2)    
+    until1 = Until(anddec2, 'U1')
+    
+    
+    cnode3 = PropConditionNode('c')        
+    untilb1 = UntilB(cnode3, 'C')
+    untila1 = UntilA(until1, 'AUB')
+    parll3 = Sequence('Seq1')    
+    parll3.add_children([untilb1, untila1])
+    anddec3 = And(parll3)
+    until2 = Until(anddec3, 'U')
+
+    expriments(traces, until2, [until2], '((a U b) U c)', args)
 
 
 def main(args):
@@ -1301,6 +1362,8 @@ def main(args):
         composite1_finally_and(args)
     elif args.test == 'C2_F_&_X':
         composite2_finally_and_next(args)        
+    elif args.test == 'C1_U_U':
+        composite1_until_until(args)
 
 
 if __name__ == '__main__':
@@ -1310,7 +1373,7 @@ if __name__ == '__main__':
         '--test', type=str, choices = [
             'P', '~', '&', 'X', 'G', 'F', 'U',
             'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&', 
-            'C1_G_&', 'C2_G_&_X', 'C1_F_&', 'C2_F_&_X'
+            'C1_G_&', 'C2_G_&_X', 'C1_F_&', 'C2_F_&_X', 'C1_U_U'
             ])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
