@@ -1395,6 +1395,71 @@ def composite1_until_next_and(args, verbos=True):
     expriments(traces, until1, [until1], '(((X c) & d) U (a & b))', args)
 
 
+
+def composite1_until_next_and1(args, verbos=True):
+    if args.trace == 'fixed':
+        # Trace of length 3
+        trace1 = [
+            {'a': True, 'b': False, 'c': False, 'd': True},
+            {'a': True, 'b': True, 'c': False, 'd': False},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}                
+        ]  
+
+        trace2 = [
+            {'a': False, 'b': False, 'c': False, 'd': True},
+            {'a': True, 'b': False, 'c': False, 'd': False},                      
+            {'a': True, 'b': True, 'c': False, 'd': True}              
+        ]  
+
+        trace3 = [
+            {'a': False, 'b': False, 'c': False, 'd': True},
+            {'a': False, 'b': True, 'c': True, 'd': True},                      
+            {'a': True, 'b': False, 'c': True, 'd': True}                
+        ]  
+
+        trace4 = [
+            {'a': True, 'b': False, 'c': False, 'd': True},
+            {'a': True, 'b': True, 'c': False, 'd': False},                      
+            {'a': True, 'b': True, 'c': True, 'd': True}     
+        ]
+
+        trace5 = [
+            {'a': False, 'b': True, 'c': False, 'd': True},
+            {'a': False, 'b': True, 'c': False, 'd': False},                      
+            {'a': True, 'b': False, 'c': True, 'd': True}     
+        ]
+        traces = [trace1, trace2, trace3, trace4, trace5]
+        # traces = [trace5]
+    else:
+        traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    
+    # Experiment variables
+    cnode1 = PropConditionNode('a')
+    cnode2 = PropConditionNode('b')    
+    cnode3 = PropConditionNode('c')
+    cnode4 = PropConditionNode('d')    
+    
+    nextd = Next(cnode3)    
+    parll = Parallel('And1')        
+    parll.add_children([nextd, cnode4])
+    aand = And(parll)        
+
+    nexta = Next(cnode1)    
+    parll1 = Parallel('And2')        
+    parll1.add_children([nexta, cnode2])
+    band = And(parll1)        
+
+
+    parll2 = Sequence('Seq')    
+    untila = UntilA(aand, name='A')
+    untilb = UntilB(band, name='B')
+    parll2.add_children([untilb, untila])
+    anddec2 = And(parll2)    
+    until1 = Until(anddec2, 'U1')
+
+    expriments(traces, until1, [until1], '(((X c) & d) U ((X a) & b))', args)
+
+
 def main(args):
     if args.test == 'P':
         proposition2condition(args)
@@ -1430,6 +1495,8 @@ def main(args):
         composite1_until_until(args)
     elif args.test == 'C1_U_X_&':
         composite1_until_next_and(args)
+    elif args.test == 'C1_U_X_&_X':
+        composite1_until_next_and1(args)        
 
 
 if __name__ == '__main__':
@@ -1439,7 +1506,7 @@ if __name__ == '__main__':
         '--test', type=str, choices = [
             'P', '~', '&', 'X', 'G', 'F', 'U',
             'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&', 
-            'C1_G_&', 'C2_G_&_X', 'C1_F_&', 'C2_F_&_X', 'C1_U_U', 'C1_U_X_&'
+            'C1_G_&', 'C2_G_&_X', 'C1_F_&', 'C2_F_&_X', 'C1_U_U', 'C1_U_X_&', 'C1_U_X_&_X'
             ])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
     parser.add_argument('--max_trace_len', type=int, default=3)    
