@@ -16,7 +16,6 @@ def testing():
         {'a': False, 'b': True, 'c': True},
         {'a': True, 'b': True, 'c': False},
         {'a': True, 'b': False, 'c': False},
-        {'a': False, 'b': True, 'c': True}
         ]
 
     print(formula.truth(t1))
