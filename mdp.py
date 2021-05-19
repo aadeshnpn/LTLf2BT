@@ -4,6 +4,7 @@ import numpy as np
 import operator
 import collections
 import random
+import copy
 
 
 # MDP
@@ -411,10 +412,12 @@ class GridMDPModfy(MDP):
         self.state_dict = dict()
         self.curr_reward = self.reward[self.startloc]
         self.state_keyslist = ['s'+str(i)+str(j) for i in range(self.rows) for j in range(self.cols)]
+        self.default_props = dict(zip(self.state_keyslist, [False] * len(self.state_keyslist)))
 
     def generate_default_props(self):
-        self.default_props = dict(zip(self.state_keyslist, [False] * len(self.state_keyslist)))
-        self.default_props[self.get_state_keys(self.curr_loc)] = True
+        props = copy.copy(self.default_props)
+        props[self.get_state_keys(self.curr_loc)] = True
+        return props
 
     def get_state_keys(self, loc):
         return  's' + str(loc[0])+str(loc[1])
