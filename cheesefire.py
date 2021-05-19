@@ -70,8 +70,12 @@ class ActionNode(Behaviour):
         Main function that is called when BT ticks.
         """
         self.env.step(self.env.env_action_dict[np.random.choice([0, 1, 2, 3])])
+        print('update')
         self.blackboard.trace.append(self.env.generate_default_props())
-        return common.Status.SUCCESS
+        if self.blackboard.trace[-1]['s33']:
+            return common.Status.SUCCESS
+        else:
+            return common.Status.FAILURE
 
 
 def init_mdp(sloc):
@@ -110,22 +114,28 @@ def main():
     gconstaint = Negation(cnode, 'Invert')
     globallyd = Globally(gconstaint)
     anode = ActionNode('s33', mdp)
-    finallya = Finally(anode)
+    # finallya = Finally(anode)
     parll = Parallel('And')
-    parll.add_children([globallyd, finallya])
+    parll.add_children([globallyd, anode])
     anddec = And(parll)
-
+    ppa1 = Selector('Selector')
+    ppa2 = Sequence('Sequence')
+    cnode2 = PropConditionNode('s33')
+    finallya = Finally(cnode2)
+    ppa2.add_children([anddec])
+    ppa1.add_children([finallya, ppa2])
     blackboard1 = blackboard.Client(name='cheese')
     blackboard1.register_key(key='trace', access=common.Access.WRITE)
     blackboard1.trace = [mdp.generate_default_props()]
 
-    bt = BehaviourTree(anddec)
-
+    bt = BehaviourTree(ppa1)
+    print(len(blackboard1.trace))
     for i in range(5):
-        setup_node([anddec], blackboard1.trace, k=0)
+        setup_node([anddec, finallya], blackboard1.trace, k=0)
         bt.tick()
+        print(len(blackboard1.trace), bt.root.status, blackboard1.trace)
 
-    print(blackboard1.trace)
+
 
 
 if __name__ == '__main__':

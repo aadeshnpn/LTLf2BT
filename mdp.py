@@ -417,7 +417,8 @@ class GridMDPModfy(MDP):
     def generate_default_props(self):
         props = copy.copy(self.default_props)
         props[self.get_state_keys(self.curr_loc)] = True
-        return props
+        return {'s33': props['s33'], 's32': props['s32']}
+        # return props
 
     def get_state_keys(self, loc):
         return  's' + str(loc[0])+str(loc[1])
