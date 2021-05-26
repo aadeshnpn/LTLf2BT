@@ -8,7 +8,7 @@ import pickle
 
 # from joblib import Parallel, delayed
 
-from mdp import GridMDP, GridMDPModfy, orientations
+from mdp import GridMDP, GridMDPModfy, orientations, dictmax
 
 from ltl2btrevised import (
     Globally, Finally, Negation, PropConditionNode,
@@ -39,7 +39,12 @@ class ActionNode(Behaviour):
         self.blackboard = blackboard.Client(name=name)
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
         self.env = env
-
+        self.qtable = dict()
+        for state in self.env.states:
+            self.qtable[state] = dict(zip(orientations, [0, 0, 0, 0]))
+        self.alpha = 0.1
+        self.gamma = 0.6
+        self.epsilon = 0.1
 
     # def setup(self, timeout, value=False):
     def setup(self, timeout, trace=None, i=0):
@@ -69,8 +74,34 @@ class ActionNode(Behaviour):
         """
         Main function that is called when BT ticks.
         """
-        self.env.step(self.env.env_action_dict[np.random.choice([0, 1, 2, 3])])
-        print('update')
+
+        ## Random planning algorithm
+        # self.env.step(self.env.env_action_dict[np.random.choice([0, 1, 2, 3])])
+        # self.blackboard.trace.append(self.env.generate_default_props())
+        # if self.blackboard.trace[-1]['s33']:
+        #     return common.Status.SUCCESS
+        # else:
+        #     return common.Status.FAILURE
+
+        ## Qlearning
+        state = self.env.curr_loc
+        if np.random.uniform(0, 1) < self.epsilon:
+            action = np.random.choice([0, 1, 2, 3])
+            action = orientations[action]
+        else:
+            action = dictmax(self.qtable[state], s='key')
+        p, s1 = zip(*self.env.T(state, action))
+        p, s1 = list(p), list(s1)
+        s1 = s1[np.argmax(p)]
+        next_state = s1
+        reward = self.env.R(next_state)
+        old_value = self.qtable[state][action]
+        next_max = dictmax(self.qtable[next_state], s='val')
+        new_value = (1-self.alpha) * old_value + self.alpha * (
+            reward + self.gamma * next_max)
+        self.qtable[state][action] = new_value
+        state = next_state
+        self.env.curr_loc = state
         self.blackboard.trace.append(self.env.generate_default_props())
         if self.blackboard.trace[-1]['s33']:
             return common.Status.SUCCESS
@@ -134,8 +165,6 @@ def main():
         setup_node([anddec, finallya], blackboard1.trace, k=0)
         bt.tick()
         print(len(blackboard1.trace), bt.root.status, blackboard1.trace)
-
-
 
 
 if __name__ == '__main__':
