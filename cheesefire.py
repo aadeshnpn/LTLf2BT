@@ -18,6 +18,7 @@ from py_trees.trees import BehaviourTree
 from py_trees.behaviour import Behaviour
 from py_trees.composites import Sequence, Selector, Parallel
 from py_trees import common, blackboard
+import py_trees
 
 from flloat.parser.ltlf import LTLfParser
 import numpy as np
@@ -139,16 +140,18 @@ def setup_node(nodes, trace, k):
         node.setup(0, trace, k)
 
 def main():
-    mdp = init_mdp((1, 3))
+    mdp = init_mdp((3, 0))
     goalspec = 'G (!s32) & F (s33)'
     cnode = PropConditionNode('s32')
     gconstaint = Negation(cnode, 'Invert')
     globallyd = Globally(gconstaint)
-    anode = ActionNode('s33', mdp)
+    anode = ActionNode('a33', mdp)
     # finallya = Finally(anode)
-    parll = Parallel('And')
-    parll.add_children([globallyd, anode])
-    anddec = And(parll)
+    # parll = Parallel('Parll')
+    # parll.add_children([globallyd, anode])
+    seq = Sequence('Seq')
+    seq.add_children([globallyd, anode])
+    anddec = And(seq)
     ppa1 = Selector('Selector')
     ppa2 = Sequence('Sequence')
     cnode2 = PropConditionNode('s33')
@@ -161,10 +164,19 @@ def main():
 
     bt = BehaviourTree(ppa1)
     print(len(blackboard1.trace))
-    for i in range(5):
+    # py_trees.logging.level = py_trees.logging.Level.DEBUG
+    # output = py_trees.display.ascii_tree(bt.root)
+    # print(output)
+    for i in range(50):
         setup_node([anddec, finallya], blackboard1.trace, k=0)
         bt.tick()
-        print(len(blackboard1.trace), bt.root.status, blackboard1.trace)
+        # print(len(blackboard1.trace), bt.root.status, blackboard1.trace)
+        # print(gconstaint.status)
+        if gconstaint.status == common.Status.FAILURE:
+            mdp.restart()
+            blackboard1.trace = [mdp.generate_default_props()]
+
+    print(blackboard1.trace)
 
 
 if __name__ == '__main__':
