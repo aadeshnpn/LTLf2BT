@@ -8,7 +8,7 @@ import pickle
 
 # from joblib import Parallel, delayed
 
-from mdp import GridMDP, GridMDPModfy, orientations, dictmax
+from mdp import GridMDP, GridMDPModfy, orientations, dictmax, create_policy
 
 from ltl2btrevised import (
     Globally, Finally, Negation, PropConditionNode,
@@ -176,7 +176,8 @@ def main():
             mdp.restart()
             blackboard1.trace = [mdp.generate_default_props()]
 
-    print(blackboard1.trace)
+    print(bt.root.status, blackboard1.trace)
+    print(mdp.to_arrows(create_policy(anode.qtable)))
 
 
 if __name__ == '__main__':
