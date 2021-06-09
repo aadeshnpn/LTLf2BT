@@ -100,10 +100,12 @@ class ActionNode(Behaviour):
         s1 = s1[np.argmax(p)]
         next_state = s1
         rectrace.append(self.env.generate_props_loc(s1))   
-        setup_node([self.recbt.root], rectrace, k=0)                     
+        nodelist = list(self.recbt.root.iterate())        
+        andnode = [node for node in nodelist if node.name in ['And']]        
+        setup_node(andnode, rectrace, k=0)                     
         self.recbt.tick()
         print(rectrace, self.recbt.root.status)
-        nodelist = list(self.recbt.root.iterate())
+
         nodes_status = [node.status for node in nodelist if node.name in ['Globally','s33']]
         constaint_rwd = -2 if nodes_status[0] == common.Status.FAILURE else 0
         postcond_rwd = +2 if nodes_status[1] == common.Status.SUCCESS else 0
@@ -148,6 +150,7 @@ def init_mdp(sloc):
 
     return mdp
 
+
 def setup_node(nodes, trace, k):
     for node in nodes:
         node.setup(0, trace, k)
@@ -156,11 +159,12 @@ def main():
     mdp = init_mdp((3, 0))
     # Recognizer BT
     rcnode = PropConditionNode('s32')
-    rgconstaint = Negation(rcnode, 'Constraint')
+    rgconstaint = Negation(rcnode, 'Invert')
     rgloballyd = Globally(rgconstaint)
     rseq = Sequence('Seq')
     rcnode2 = PropConditionNode('s33')
-    rseq.add_children([rgloballyd, rcnode2])
+    rfinallya = Finally(rcnode2)    
+    rseq.add_children([rgloballyd, rfinallya])
     randdec = And(rseq)    
     btrec = BehaviourTree(randdec)    
 
@@ -187,6 +191,8 @@ def main():
     print(len(blackboard1.trace))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
     output = py_trees.display.ascii_tree(bt.root)
+    print(output)    
+    output = py_trees.display.ascii_tree(btrec.root)
     print(output)
 
     for i in range(50):
