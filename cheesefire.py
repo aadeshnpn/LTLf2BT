@@ -33,7 +33,7 @@ class ActionNode(Behaviour):
     behavior implements the action node for the planning LTLf propositions.
     """
 
-    def __init__(self, name, env):
+    def __init__(self, name, env, recbt=None):
         """Init method for the condition node."""
         super(ActionNode, self).__init__(name)
         self.action_symbol = name
@@ -46,6 +46,7 @@ class ActionNode(Behaviour):
         self.alpha = 0.1
         self.gamma = 0.6
         self.epsilon = 0.1
+        self.recbt = recbt
 
     # def setup(self, timeout, value=False):
     def setup(self, timeout, trace=None, i=0):
@@ -85,6 +86,9 @@ class ActionNode(Behaviour):
         #     return common.Status.FAILURE
 
         ## Qlearning
+        self.recbt.root.reset()
+        rectrace = []
+        rectrace.append(self.env.generate_default_props())
         state = self.env.curr_loc
         if np.random.uniform(0, 1) < self.epsilon:
             action = np.random.choice([0, 1, 2, 3])
@@ -95,7 +99,16 @@ class ActionNode(Behaviour):
         p, s1 = list(p), list(s1)
         s1 = s1[np.argmax(p)]
         next_state = s1
-        reward = self.env.R(next_state)
+        rectrace.append(self.env.generate_props_loc(s1))   
+        setup_node([self.recbt.root], rectrace, k=0)                     
+        self.recbt.tick()
+        print(rectrace, self.recbt.root.status)
+        nodelist = list(self.recbt.root.iterate())
+        nodes_status = [node.status for node in nodelist if node.name in ['Globally','s33']]
+        constaint_rwd = -2 if nodes_status[0] == common.Status.FAILURE else 0
+        postcond_rwd = +2 if nodes_status[1] == common.Status.SUCCESS else 0
+        reward = constaint_rwd + postcond_rwd - 0.04
+        # reward = self.env.R(next_state)
         old_value = self.qtable[state][action]
         next_max = dictmax(self.qtable[next_state], s='val')
         new_value = (1-self.alpha) * old_value + self.alpha * (
@@ -119,7 +132,7 @@ def init_mdp(sloc):
     grid[2][2] = None
     grid[1][1] = None
 
-    # Cheese and trap
+    # Cheese and trapfinallya
     grid[0][3] = None
     grid[1][3] = None
 
@@ -141,14 +154,22 @@ def setup_node(nodes, trace, k):
 
 def main():
     mdp = init_mdp((3, 0))
+    # Recognizer BT
+    rcnode = PropConditionNode('s32')
+    rgconstaint = Negation(rcnode, 'Constraint')
+    rgloballyd = Globally(rgconstaint)
+    rseq = Sequence('Seq')
+    rcnode2 = PropConditionNode('s33')
+    rseq.add_children([rgloballyd, rcnode2])
+    randdec = And(rseq)    
+    btrec = BehaviourTree(randdec)    
+
+    # Planner BT
     goalspec = 'G (!s32) & F (s33)'
     cnode = PropConditionNode('s32')
     gconstaint = Negation(cnode, 'Invert')
     globallyd = Globally(gconstaint)
-    anode = ActionNode('a33', mdp)
-    # finallya = Finally(anode)
-    # parll = Parallel('Parll')
-    # parll.add_children([globallyd, anode])
+    anode = ActionNode('a33', mdp, btrec)
     seq = Sequence('Seq')
     seq.add_children([globallyd, anode])
     anddec = And(seq)
@@ -161,12 +182,13 @@ def main():
     blackboard1 = blackboard.Client(name='cheese')
     blackboard1.register_key(key='trace', access=common.Access.WRITE)
     blackboard1.trace = [mdp.generate_default_props()]
-
-    bt = BehaviourTree(ppa1)
+    bt = BehaviourTree(ppa1)    
+    
     print(len(blackboard1.trace))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
-    # output = py_trees.display.ascii_tree(bt.root)
-    # print(output)
+    output = py_trees.display.ascii_tree(bt.root)
+    print(output)
+
     for i in range(50):
         setup_node([anddec, finallya], blackboard1.trace, k=0)
         bt.tick()
