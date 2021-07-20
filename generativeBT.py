@@ -124,9 +124,10 @@ class ActionNode(Behaviour):
         p, s1 = zip(*self.env.T(state, action))
         p, s1 = list(p), list(s1)
         s1 = s1[np.argmax(p)]
-        # print(state, s1)
+        print('State', s1)
+        self.blackboard.trace.append(self.env.generate_props_loc(s1))
         self.env.curr_loc = s1
-        if self.blackboard.trace[-1]['s33']:
+        if self.blackboard.trace[-1][self.action_symbol]:
             return common.Status.SUCCESS
         else:
             return common.Status.RUNNING
@@ -167,12 +168,10 @@ def setup_node(nodes, trace, k):
 def create_recognizer_bt():
     main = Selector('RMain')
     cheese = PropConditionNode('s33')
-    # cheese = ActionNode('s33')
     atrue = AlwaysTrueNode('AT')
     parll2 = Sequence('UntilAnd')
     untila = UntilA(copy.copy(atrue))
     untilb = UntilB(copy.copy(cheese))
-    # untilb = UntilB(cheese)
     parll2.add_children([untilb, untila])
     anddec2 = And(parll2)
     until = Until(anddec2)
@@ -181,25 +180,24 @@ def create_recognizer_bt():
     parll1.add_children([atrue, next])
     anddec1 = And(parll1)
     main.add_children([cheese, anddec1])
-    # main.add_children([anddec1])
     bt = BehaviourTree(main)
-    print(py_trees.display.ascii_tree(bt.root))
+    # print(py_trees.display.ascii_tree(bt.root))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
     return bt, next, cheese
 
 
-def create_generator_bt(recbt):
+def create_generator_bt(recbt, env):
     gmain = Selector('Main')
     seqg = Sequence('SeqG')
 
     main = Selector('GMain')
     cheese = PropConditionNode('s33')
+    acheese = ActionNode('s33', env)
     # cheese = ActionNode('s33')
     atrue = AlwaysTrueNode('AT')
     parll2 = Sequence('UntilAnd')
     untila = UntilA(copy.copy(atrue))
-    # untilb = UntilB(copy.copy(cheese))
-    untilb = UntilB(cheese)
+    untilb = UntilB(acheese)
     parll2.add_children([untilb, untila])
     anddec2 = And(parll2)
     until = Until(anddec2)
@@ -207,9 +205,13 @@ def create_generator_bt(recbt):
     parll1 = Sequence('TrueNext')
     parll1.add_children([atrue, next])
     anddec1 = And(parll1)
-    # main.add_children([cheese, anddec1])
-    main.add_children([anddec1])
-    bt = BehaviourTree(main)
+    main.add_children([cheese, anddec1])
+    seqg.add_children([main])
+    gmain.add_children([recbt.root, seqg])
+    bt = BehaviourTree(gmain)
+    print(py_trees.display.ascii_tree(bt.root))
+    # py_trees.logging.level = py_trees.logging.Level.DEBUG
+    return bt, next, cheese
 
 
 def base_exp():
@@ -232,14 +234,42 @@ def base_exp():
     for i in range(len(trace)):
         setup_node(andec, bboard.trace, k=0)
         bt.tick()
-        # print(bt.root.status)
     parser = LTLfParser()
     formula = parser(goalspec)        # returns a LTLfFormula
     print(formula.truth(trace), bt.root.status)
 
 
+def simple_exp():
+    mdp = init_mdp((0, 3))
+    goalspec = '(s33)|(true & (X (true U s33)))'
+    # anode = ActionNode('cheese', mdp)
+    bboard = blackboard.Client(name='cheese')
+    bboard.register_key(key='trace', access=common.Access.WRITE)
+    bboard.trace = []
+    bboard.trace.append(mdp.generate_default_props())
+    # trace = [
+    #     {'s33': False},
+    #     {'s33': True},
+    #     ]
+    # bboard.trace = trace
+    print(bboard.trace)
+    recbt = create_recognizer_bt()
+    genbt = create_generator_bt(recbt[0], mdp)
+    # andec = bt[1:]
+    # bt = bt[0]
+    for i in range(2):
+        # recbt[0].root.reset()
+        setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
+        genbt[0].tick()
+    parser = LTLfParser()
+    formula = parser(goalspec)
+    print(bboard.trace)
+    print(formula.truth(bboard.trace), genbt[0].root.status)
+
+
 def main():
-    base_exp()
+    # base_exp()
+    simple_exp()
     # print(bt.root.status, blackboard1.trace)
     # print(mdp.to_arrows(create_policy(anode.qtable)))
 
