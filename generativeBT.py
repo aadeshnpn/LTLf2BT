@@ -67,3 +67,119 @@ class AlwaysTrueNode(Behaviour):
         Main function that is called when BT ticks.
         """
         return common.Status.SUCCESS
+
+
+# Just a simple action node that already has an optimal
+# policy for the simple grid world
+class ActionNode(Behaviour):
+    """Action node for the planning atomic propositions.
+
+    Inherits the Behaviors class from py_trees. This
+    behavior implements the action node for the planning LTLf propositions.
+    """
+
+    def __init__(self, name, env, recbt=None):
+        """Init method for the action node."""
+        super(ActionNode, self).__init__(name)
+        self.action_symbol = name
+        self.blackboard = blackboard.Client(name=name)
+        self.blackboard.register_key(key='trace', access=common.Access.WRITE)
+        self.env = env
+        self.qtable = dict()
+        for state in self.env.states:
+            self.qtable[state] = dict(zip(orientations, [0, 0, 0, 0]))
+        for i in range(0,4):
+            self.qtable[(i,3)][(1,0)] = 1
+
+    def setup(self, timeout, trace=None, i=0):
+        """Have defined the setup method.
+
+        This method defines the other objects required for the
+        condition node.
+        Args:
+        timeout: property from Behavior super class. Not required
+        symbol: Name of the proposition symbol
+        value: A dict object with key as the proposition symbol and
+               boolean value as values. Supplied by trace.
+        """
+        self.index = i
+
+    def initialise(self):
+        """Everytime initialization. Not required for now."""
+        pass
+
+    def reset(self, i=0):
+        self.index = i
+
+    def increment(self):
+        self.index += 1
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        """
+        state = self.env.curr_loc
+        action = dictmax(self.qtable[state], s='key')
+        print('action', action)
+        p, s1 = zip(*self.env.T(state, action))
+        p, s1 = list(p), list(s1)
+        s1 = s1[np.argmax(p)]
+        print(state, s1)
+        self.env.curr_loc = s1
+        return common.Status.RUNNING
+
+
+def init_mdp(sloc):
+    """Initialized a simple MDP world."""
+    grid = np.ones((4, 4)) * -0.04
+
+    # Obstacles
+    grid[3][0] = None
+    grid[2][2] = None
+    grid[1][1] = None
+
+    # Cheese and trapfinallya
+    grid[0][3] = None
+    # grid[1][3] = None
+
+    grid = np.where(np.isnan(grid), None, grid)
+    grid = grid.tolist()
+
+    # Terminal and obstacles defination
+    grid[0][3] = +2
+    # grid[1][3] = -2
+
+    mdp = GridMDPModfy(
+        grid, terminals=[None, None], startloc=sloc)
+
+    return mdp
+
+
+def setup_node(nodes, trace, k):
+    for node in nodes:
+        node.setup(0, trace, k)
+
+
+def base_exp():
+    mdp = init_mdp((0, 3))
+    anode = ActionNode('cheese', mdp)
+    bboard = blackboard.Client(name='cheese')
+    bboard.register_key(key='trace', access=common.Access.WRITE)
+    bboard.trace = []
+    bboard.trace.append(mdp.generate_default_props())
+    # print(anode.qtable)
+    bt = BehaviourTree(anode)
+    for i in range(3):
+        bt.tick()
+    print(bt.root.status)
+
+
+
+def main():
+    base_exp()
+    # print(bt.root.status, blackboard1.trace)
+    # print(mdp.to_arrows(create_policy(anode.qtable)))
+
+
+if __name__ == '__main__':
+    main()
