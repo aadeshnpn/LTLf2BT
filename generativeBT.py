@@ -17,7 +17,6 @@ from py_trees.behaviour import Behaviour
 from py_trees.composites import Sequence, Selector, Parallel
 from py_trees import common, blackboard
 import py_trees
-
 from flloat.parser.ltlf import LTLfParser
 import numpy as np
 import time
@@ -162,7 +161,6 @@ def init_mdp(sloc):
 
 def setup_node(nodes, trace, k):
     for node in nodes:
-        print('setup', node)
         node.setup(0, trace, k)
 
 
@@ -173,7 +171,8 @@ def create_recognizer_bt():
     atrue = AlwaysTrueNode('AT')
     parll2 = Sequence('UntilAnd')
     untila = UntilA(copy.copy(atrue))
-    untilb = UntilB(copy.copy(cheese))
+    # untilb = UntilB(copy.copy(cheese))
+    untilb = UntilB(cheese)
     parll2.add_children([untilb, untila])
     anddec2 = And(parll2)
     until = Until(anddec2)
@@ -181,15 +180,17 @@ def create_recognizer_bt():
     parll1 = Sequence('TrueNext')
     parll1.add_children([atrue, next])
     anddec1 = And(parll1)
-    main.add_children([cheese, anddec1])
+    # main.add_children([cheese, anddec1])
+    main.add_children([anddec1])
     bt = BehaviourTree(main)
     print(py_trees.display.ascii_tree(bt.root))
-    py_trees.logging.level = py_trees.logging.Level.DEBUG
-    return bt, next, cheese
+    # py_trees.logging.level = py_trees.logging.Level.DEBUG
+    return bt, next # , cheese
 
 
 def base_exp():
     mdp = init_mdp((3, 3))
+    goalspec = '(s33)|(true & (X (true U s33)))'
     # anode = ActionNode('cheese', mdp)
     bboard = blackboard.Client(name='cheese')
     bboard.register_key(key='trace', access=common.Access.WRITE)
@@ -197,18 +198,20 @@ def base_exp():
     # bboard.trace.append(mdp.generate_default_props())
     trace = [
         {'s33': False},
-        {'s33': False}
+        {'s33': False},
         ]
     bboard.trace = trace
-    print(bboard)
+    print(bboard.trace)
     bt = create_recognizer_bt()
     andec = bt[1:]
-    print(andec)
     bt = bt[0]
-    for i in range(2):
+    for i in range(len(trace)):
         setup_node(andec, bboard.trace, k=0)
         bt.tick()
-        print(bt.root.status)
+        # print(bt.root.status)
+    parser = LTLfParser()
+    formula = parser(goalspec)        # returns a LTLfFormula
+    print(formula.truth(trace), bt.root.status)
 
 
 def main():

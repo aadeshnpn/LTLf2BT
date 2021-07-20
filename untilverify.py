@@ -27,7 +27,8 @@ def main():
 
     # formula_string = "((X a) & (b)) U c"
     # formula_string = " (X (a & b))"
-    formula_string = " (X (F a))"
+    # formula_string = " (X (F a))"
+    formula_string = "(a)|(true & (X (true U a)))"
     formula = parser(formula_string)        # returns a LTLfFormula
 
     t1 = [
