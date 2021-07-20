@@ -9,8 +9,8 @@ import pickle
 from mdp import GridMDP, GridMDPModfy, orientations, dictmax, create_policy
 
 from ltl2btrevised import (
-    Globally, Finally, Negation, PropConditionNode,
-    getrandomtrace, And)
+    Globally, Finally, Negation, Next, PropConditionNode,
+    getrandomtrace, And, Until, UntilA, UntilB)
 
 from py_trees.trees import BehaviourTree
 from py_trees.behaviour import Behaviour
@@ -21,6 +21,7 @@ import py_trees
 from flloat.parser.ltlf import LTLfParser
 import numpy as np
 import time
+import copy
 
 
 # Just a simple condition node that implements atomic propositions
@@ -120,13 +121,17 @@ class ActionNode(Behaviour):
         """
         state = self.env.curr_loc
         action = dictmax(self.qtable[state], s='key')
-        print('action', action)
+        # print('action', action)
         p, s1 = zip(*self.env.T(state, action))
         p, s1 = list(p), list(s1)
         s1 = s1[np.argmax(p)]
-        print(state, s1)
+        # print(state, s1)
         self.env.curr_loc = s1
-        return common.Status.RUNNING
+        if self.blackboard.trace[-1]['s33']:
+            return common.Status.SUCCESS
+        else:
+            return common.Status.RUNNING
+        # return common.Status.RUNNING
 
 
 def init_mdp(sloc):
@@ -157,22 +162,53 @@ def init_mdp(sloc):
 
 def setup_node(nodes, trace, k):
     for node in nodes:
+        print('setup', node)
         node.setup(0, trace, k)
 
 
+def create_recognizer_bt():
+    main = Selector('RMain')
+    cheese = PropConditionNode('s33')
+    # cheese = ActionNode('s33')
+    atrue = AlwaysTrueNode('AT')
+    parll2 = Sequence('UntilAnd')
+    untila = UntilA(copy.copy(atrue))
+    untilb = UntilB(copy.copy(cheese))
+    parll2.add_children([untilb, untila])
+    anddec2 = And(parll2)
+    until = Until(anddec2)
+    next = Next(until)
+    parll1 = Sequence('TrueNext')
+    parll1.add_children([atrue, next])
+    anddec1 = And(parll1)
+    main.add_children([cheese, anddec1])
+    bt = BehaviourTree(main)
+    print(py_trees.display.ascii_tree(bt.root))
+    py_trees.logging.level = py_trees.logging.Level.DEBUG
+    return bt, next, cheese
+
+
 def base_exp():
-    mdp = init_mdp((0, 3))
-    anode = ActionNode('cheese', mdp)
+    mdp = init_mdp((3, 3))
+    # anode = ActionNode('cheese', mdp)
     bboard = blackboard.Client(name='cheese')
     bboard.register_key(key='trace', access=common.Access.WRITE)
     bboard.trace = []
-    bboard.trace.append(mdp.generate_default_props())
-    # print(anode.qtable)
-    bt = BehaviourTree(anode)
-    for i in range(3):
+    # bboard.trace.append(mdp.generate_default_props())
+    trace = [
+        {'s33': False},
+        {'s33': False}
+        ]
+    bboard.trace = trace
+    print(bboard)
+    bt = create_recognizer_bt()
+    andec = bt[1:]
+    print(andec)
+    bt = bt[0]
+    for i in range(2):
+        setup_node(andec, bboard.trace, k=0)
         bt.tick()
-    print(bt.root.status)
-
+        print(bt.root.status)
 
 
 def main():
