@@ -171,6 +171,33 @@ def create_recognizer_bt():
     atrue = AlwaysTrueNode('AT')
     parll2 = Sequence('UntilAnd')
     untila = UntilA(copy.copy(atrue))
+    untilb = UntilB(copy.copy(cheese))
+    # untilb = UntilB(cheese)
+    parll2.add_children([untilb, untila])
+    anddec2 = And(parll2)
+    until = Until(anddec2)
+    next = Next(until)
+    parll1 = Sequence('TrueNext')
+    parll1.add_children([atrue, next])
+    anddec1 = And(parll1)
+    main.add_children([cheese, anddec1])
+    # main.add_children([anddec1])
+    bt = BehaviourTree(main)
+    print(py_trees.display.ascii_tree(bt.root))
+    # py_trees.logging.level = py_trees.logging.Level.DEBUG
+    return bt, next, cheese
+
+
+def create_generator_bt(recbt):
+    gmain = Selector('Main')
+    seqg = Sequence('SeqG')
+
+    main = Selector('GMain')
+    cheese = PropConditionNode('s33')
+    # cheese = ActionNode('s33')
+    atrue = AlwaysTrueNode('AT')
+    parll2 = Sequence('UntilAnd')
+    untila = UntilA(copy.copy(atrue))
     # untilb = UntilB(copy.copy(cheese))
     untilb = UntilB(cheese)
     parll2.add_children([untilb, untila])
@@ -183,9 +210,6 @@ def create_recognizer_bt():
     # main.add_children([cheese, anddec1])
     main.add_children([anddec1])
     bt = BehaviourTree(main)
-    print(py_trees.display.ascii_tree(bt.root))
-    # py_trees.logging.level = py_trees.logging.Level.DEBUG
-    return bt, next # , cheese
 
 
 def base_exp():
@@ -198,7 +222,7 @@ def base_exp():
     # bboard.trace.append(mdp.generate_default_props())
     trace = [
         {'s33': False},
-        {'s33': False},
+        {'s33': True},
         ]
     bboard.trace = trace
     print(bboard.trace)
