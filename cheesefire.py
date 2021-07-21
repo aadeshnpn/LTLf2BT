@@ -99,10 +99,10 @@ class ActionNode(Behaviour):
         p, s1 = list(p), list(s1)
         s1 = s1[np.argmax(p)]
         next_state = s1
-        rectrace.append(self.env.generate_props_loc(s1))   
-        nodelist = list(self.recbt.root.iterate())        
-        andnode = [node for node in nodelist if node.name in ['And']]        
-        setup_node(andnode, rectrace, k=0)                     
+        rectrace.append(self.env.generate_props_loc(s1))
+        nodelist = list(self.recbt.root.iterate())
+        andnode = [node for node in nodelist if node.name in ['And']]
+        setup_node(andnode, rectrace, k=0)
         self.recbt.tick()
         print(rectrace, self.recbt.root.status)
 
@@ -163,10 +163,10 @@ def main():
     rgloballyd = Globally(rgconstaint)
     rseq = Sequence('Seq')
     rcnode2 = PropConditionNode('s33')
-    rfinallya = Finally(rcnode2)    
+    rfinallya = Finally(rcnode2)
     rseq.add_children([rgloballyd, rfinallya])
-    randdec = And(rseq)    
-    btrec = BehaviourTree(randdec)    
+    randdec = And(rseq)
+    btrec = BehaviourTree(randdec)
 
     # Planner BT
     goalspec = 'G (!s32) & F (s33)'
@@ -186,12 +186,12 @@ def main():
     blackboard1 = blackboard.Client(name='cheese')
     blackboard1.register_key(key='trace', access=common.Access.WRITE)
     blackboard1.trace = [mdp.generate_default_props()]
-    bt = BehaviourTree(ppa1)    
-    
+    bt = BehaviourTree(ppa1)
+
     print(len(blackboard1.trace))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
     output = py_trees.display.ascii_tree(bt.root)
-    print(output)    
+    print(output)
     output = py_trees.display.ascii_tree(btrec.root)
     print(output)
 

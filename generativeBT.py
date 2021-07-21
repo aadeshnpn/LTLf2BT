@@ -91,6 +91,10 @@ class ActionNode(Behaviour):
         for i in range(0,4):
             self.qtable[(i,3)][(1,0)] = 1
 
+        # If started near the trap making it probable to bump into trap
+        self.qtable[(3,1)][(0,1)] = 0.8
+        self.qtable[(3,1)][(0,-1)] = 0.2
+
     def setup(self, timeout, trace=None, i=0):
         """Have defined the setup method.
 
@@ -130,6 +134,9 @@ class ActionNode(Behaviour):
         if 's'+str(s1[0])+str(s1[1]) == self.action_symbol:
             self.blackboard.trace.append(self.env.generate_props_loc(s1))
             return common.Status.SUCCESS
+        elif 's'+str(s1[0])+str(s1[1]) == 's32':
+            self.blackboard.trace.append(self.env.generate_props_loc(s1))
+            return common.Status.FAILURE
         else:
             return common.Status.RUNNING
         # return common.Status.RUNNING
@@ -243,23 +250,14 @@ def base_exp():
 def simple_exp():
     mdp = init_mdp((0, 3))
     goalspec = '(s33)|(true & (X (true U s33)))'
-    # anode = ActionNode('cheese', mdp)
     bboard = blackboard.Client(name='cheese')
     bboard.register_key(key='trace', access=common.Access.WRITE)
     bboard.trace = []
     bboard.trace.append(mdp.generate_default_props())
-    # trace = [
-    #     {'s33': False},
-    #     {'s33': True},
-    #     ]
-    # bboard.trace = trace
-    print(bboard.trace)
     recbt = create_recognizer_bt()
     genbt = create_generator_bt(recbt[0], mdp)
-    # andec = bt[1:]
-    # bt = bt[0]
     for i in range(3):
-        # recbt[0].root.reset()
+        recbt[0].root.children[1].reset()
         setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
         genbt[0].tick()
         print(i, genbt[0].root.status, bboard.trace)
@@ -269,9 +267,118 @@ def simple_exp():
     print(formula.truth(bboard.trace), genbt[0].root.status)
 
 
+def medium_exp():
+    mdp = init_mdp((0, 3))
+    # goalspec = '(s33)|(true & (X (true U s33)))'
+    goalspec = '(G(!s32) & s33) | (G(!s32) & (X (G(!s32) U (G(!s31) & s32))))'
+    bboard = blackboard.Client(name='cheese')
+    bboard.register_key(key='trace', access=common.Access.WRITE)
+    bboard.trace = []
+    bboard.trace.append(mdp.generate_default_props())
+    print(bboard.trace)
+    def create_rec_bt():
+        main = Selector('RMain')
+        cheese = PropConditionNode('s33')
+        # Trap global constraint
+        trap = PropConditionNode('s32')
+        negtrap = Negation(copy.copy(trap), 'NegTrap')
+        gtrap = Globally(negtrap, 'GTrap')
+        gtrapcopy1 = copy.copy(gtrap)
+        gtrapcopy2 = copy.copy(gtrap)
+        # Post condition
+        pandseq = Sequence('PostCondAnd')
+        pandseq.add_children([gtrapcopy1, cheese])
+        pand = And(pandseq)
+
+        # Until
+        parll2 = Sequence('UntilAnd')
+        untila = UntilA(gtrap)
+        untilb = UntilB(copy.copy(pand))
+        parll2.add_children([untilb, untila])
+        anddec2 = And(parll2)
+        until = Until(anddec2)
+        # Next
+        next = Next(until)
+        parll1 = Sequence('TrueNext')
+
+        parll1.add_children([gtrapcopy2, next])
+        anddec1 = And(parll1)
+        # Root node
+        main.add_children([pand, anddec1])
+        bt = BehaviourTree(main)
+        # print(py_trees.display.ascii_tree(bt.root))
+        # py_trees.logging.level = py_trees.logging.Level.DEBUG
+        return bt, next, cheese, trap, gtrap, gtrapcopy1, gtrapcopy2
+
+    def create_gen_bt(rbt, mdp):
+        gmain = Selector('Main')
+        seqg = Sequence('SeqG')
+
+        main = Selector('GMain')
+        cheese = PropConditionNode('s33')
+        cheeseaction = ActionNode('s33', mdp)
+        # Trap global constraint
+        trap = PropConditionNode('s32')
+        negtrap = Negation(copy.copy(trap), 'NegTrap')
+        gtrap = Globally(negtrap, 'GTrap')
+        gtrapcopy1 = copy.copy(gtrap)
+        gtrapcopy2 = copy.copy(gtrap)
+        gtrapcopy3 = copy.copy(gtrap)
+        # Post condition
+        pandseq = Sequence('PostCondAnd')
+        pandseq.add_children([gtrap, cheese])
+        pand = And(pandseq)
+
+        # Post action
+        aandseq = Sequence('PostActionAnd')
+        aandseq.add_children([gtrapcopy1, cheeseaction])
+        aand = And(aandseq)
+
+        # Until
+        parll2 = Sequence('UntilAnd')
+        untila = UntilA(gtrapcopy2)
+        untilb = UntilB(aand)
+        parll2.add_children([untilb, untila])
+        anddec2 = And(parll2)
+        until = Until(anddec2)
+        # Next
+        next = Next(until)
+        parll1 = Sequence('TrueNext')
+        parll1.add_children([gtrapcopy3, next])
+        anddec1 = And(parll1)
+        # Root node
+        main.add_children([pand, anddec1])
+        seqg.add_children([main])
+        gmain.add_children([rbt.root, seqg])
+        bt = BehaviourTree(gmain)
+
+        # print(py_trees.display.ascii_tree(bt.root))
+        # py_trees.logging.level = py_trees.logging.Level.DEBUG
+        return bt, next, cheese, trap , gtrap, gtrapcopy1, gtrapcopy2, gtrapcopy3
+
+    recbt = create_rec_bt()
+    genbt = create_gen_bt(recbt[0], mdp)
+    for i in range(3):
+        recbt[0].root.children[1].reset()
+        setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
+        genbt[0].tick()
+        print(i, genbt[0].root.status, bboard.trace)
+    trace = [
+        {'s33': False, 's32': False},
+        {'s33': True, 's32': False},
+        ]
+    bboard.trace = trace
+    parser = LTLfParser()
+    formula = parser(goalspec)
+    print(bboard.trace)
+    print(formula.truth(bboard.trace), genbt[0].root.status)
+
+
+
 def main():
     # base_exp()
-    simple_exp()
+    # simple_exp()
+    medium_exp()
     # print(bt.root.status, blackboard1.trace)
     # print(mdp.to_arrows(create_policy(anode.qtable)))
 
