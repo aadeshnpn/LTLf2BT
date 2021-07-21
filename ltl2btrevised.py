@@ -172,7 +172,10 @@ class PropConditionNode(Behaviour):
         # else
         ## return Failure
         # if self.value[self.proposition_symbol]:
-        # print('proposition index',self.name, self.index, self.trace[self.index][self.proposition_symbol])
+        # print(
+        #     'proposition index',
+        #     self.name, self.index, self.proposition_symbol,
+        #     self.trace[self.index][self.proposition_symbol])
         try:
             if self.trace[self.index][self.proposition_symbol]:
                 return_value = common.Status.SUCCESS
