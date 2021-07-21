@@ -125,9 +125,10 @@ class ActionNode(Behaviour):
         p, s1 = list(p), list(s1)
         s1 = s1[np.argmax(p)]
         print('State', s1)
-        self.blackboard.trace.append(self.env.generate_props_loc(s1))
         self.env.curr_loc = s1
-        if self.blackboard.trace[-1][self.action_symbol]:
+        # if self.blackboard.trace[-1][self.action_symbol]:
+        if 's'+str(s1[0])+str(s1[1]) == self.action_symbol:
+            self.blackboard.trace.append(self.env.generate_props_loc(s1))
             return common.Status.SUCCESS
         else:
             return common.Status.RUNNING
@@ -209,7 +210,7 @@ def create_generator_bt(recbt, env):
     seqg.add_children([main])
     gmain.add_children([recbt.root, seqg])
     bt = BehaviourTree(gmain)
-    print(py_trees.display.ascii_tree(bt.root))
+    # print(py_trees.display.ascii_tree(bt.root))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
     return bt, next, cheese
 
@@ -257,11 +258,11 @@ def simple_exp():
     genbt = create_generator_bt(recbt[0], mdp)
     # andec = bt[1:]
     # bt = bt[0]
-    for i in range(2):
+    for i in range(3):
         # recbt[0].root.reset()
         setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
         genbt[0].tick()
-        print(i, genbt[0].root.status)
+        print(i, genbt[0].root.status, bboard.trace)
     parser = LTLfParser()
     formula = parser(goalspec)
     print(bboard.trace)
