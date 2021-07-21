@@ -28,13 +28,16 @@ def main():
     # formula_string = "((X a) & (b)) U c"
     # formula_string = " (X (a & b))"
     # formula_string = " (X (F a))"
-    formula_string = "(a)|(true & (X (true U a)))"
+    # formula_string = "(a)|(true & (X (true U a)))"
+    formula_string = " (F(a) & ((F(b))))"
     formula = parser(formula_string)        # returns a LTLfFormula
 
     t1 = [
+        {'a': False, 'b': False, 'c': False},
+        {'a': False, 'b': False, 'c': False},
+        {'a': True, 'b': False, 'c': True},
         {'a': False, 'b': True, 'c': False},
-        {'a': True, 'b': False, 'c': False},
-        {'a': False, 'b': True, 'c': True}
+        {'a': False, 'b': False, 'c': True}
         ]
 
     print(formula.truth(t1))

@@ -140,32 +140,41 @@ def setup_node(nodes, trace, k):
 def advance_exp():
     mdp = init_mdp((3, 0))
     # goalspec = '(s33)|(true & (X (true U s33)))'
-    goalspec = '(G(!s32) & s33) | (G(!s32) & (X (G(!s32) U (G(!s32) & s33))))'
+    goalspec_cheese = '(G(!t) & c) | (G(!t) & (F (G(!t) U (G(!t) & c))))'
+    goalspec_home = '(G(!t) & c & h) | (G(!t) & (F ((G(!t) & c) U (G(!t) & h))))'
+    goalspec = '('+ goalspec_cheese + ') & X (' + goalspec_home +')'
     bboard = blackboard.Client(name='cheese')
     bboard.register_key(key='trace', access=common.Access.WRITE)
     bboard.trace = []
     bboard.trace.append(mdp.generate_default_props())
     print(bboard.trace)
-    recbt = create_rec_bt()
-    genbt = create_gen_bt(recbt[0], mdp)
-    for i in range(3):
-        print(py_trees.display.ascii_tree(genbt[0].root))
-        # recbt[0].root.children[1].reset()
-        # genbt[0].root.children[0].children[0].children[0].reset()
-        setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
-        genbt[0].tick()
-        print(
-            i, genbt[0].root.status, bboard.trace,
-            [(a.name, a.status) for a in genbt[3:]])
+    # recbt = create_rec_bt()
+    # genbt = create_gen_bt(recbt[0], mdp)
+    # for i in range(3):
+    #     print(py_trees.display.ascii_tree(genbt[0].root))
+    #     # recbt[0].root.children[1].reset()
+    #     # genbt[0].root.children[0].children[0].children[0].reset()
+    #     setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
+    #     genbt[0].tick()
+    #     print(
+    #         i, genbt[0].root.status, bboard.trace,
+    #         [(a.name, a.status) for a in genbt[3:]])
     trace = [
-        {'s33': False, 's32': False},
-        {'s33': True, 's32': False},
+        {'c': False, 't': False, 'h':False},
+        {'c': False, 't': False, 'h':False},
+        {'c': False, 't': True, 'h':False},
+        {'c': True, 't': False, 'h':False},
+        {'c': True, 't': False, 'h':True},
+        {'c': True, 't': False, 'h':True},
+        {'c': True, 't': False, 'h':True},
+        {'c': True, 't': False, 'h':True},
+        {'c': True, 't': False, 'h':True},
         ]
-    # bboard.trace = trace
+    bboard.trace = trace
     parser = LTLfParser()
     formula = parser(goalspec)
     print(bboard.trace)
-    print(formula.truth(bboard.trace), genbt[0].root.status)
+    print(formula.truth(bboard.trace))
 
 
 def create_rec_bt():
