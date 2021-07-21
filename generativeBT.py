@@ -261,6 +261,7 @@ def simple_exp():
         # recbt[0].root.reset()
         setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
         genbt[0].tick()
+        print(i, genbt[0].root.status)
     parser = LTLfParser()
     formula = parser(goalspec)
     print(bboard.trace)

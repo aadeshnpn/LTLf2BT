@@ -223,7 +223,9 @@ class Negation(Decorator):
         # else
         ## return Success
         # This give access to the child class of decorator class
-        if  self.decorated.status == common.Status.FAILURE:
+        if self.decorated.status == common.Status.RUNNING:
+            return common.Status.RUNNING
+        elif self.decorated.status == common.Status.FAILURE:
             return common.Status.SUCCESS
         elif self.decorated.status == common.Status.SUCCESS:
             return common.Status.FAILURE
@@ -325,7 +327,9 @@ class Next(Decorator):
         This returns the Next operator status
         """
         # This give access to the child class of decorator class
-        if self.decorated.status == common.Status.SUCCESS:
+        if self.decorated.status == common.Status.RUNNING:
+            self.next_status = common.Status.RUNNING
+        elif self.decorated.status == common.Status.SUCCESS:
             self.next_status = common.Status.SUCCESS
         elif self.decorated.status == common.Status.FAILURE:
             self.next_status = common.Status.FAILURE
@@ -374,14 +378,15 @@ class Globally(Decorator):
         #  Repeat until logic for decorator
         return_value = self.decorated.status
         for j in range(self.idx+1, len(self.trace)):
-            if return_value == common.Status.SUCCESS:
+            if return_value == common.Status.RUNNING:
+                return common.Status.RUNNING
+            elif return_value == common.Status.SUCCESS:
                 self.decorated.setup(0, self.trace, j)
                 return_value = list(self.decorated.tick())[-1].update()
             elif return_value == common.Status.FAILURE:
                 break
 
         return return_value
-
 
 
 # Just a simple decorator node that implements Finally LTLf operator
@@ -425,7 +430,9 @@ class Finally(Decorator):
         #  Repeat until logic for decorator
         return_value = self.decorated.status
         for j in range(self.idx+1, len(self.trace)):
-            if return_value == common.Status.SUCCESS:
+            if self.decorated.status == common.Status.RUNNING:
+                return common.Status.RUNNING
+            elif return_value == common.Status.SUCCESS:
                 break
             elif return_value == common.Status.FAILURE:
                 self.decorated.setup(0, self.trace, j)
@@ -476,7 +483,9 @@ class Until(Decorator):
         #  Repeat until logic for decorator
         # print('Until', self.idx, self.decorated.status)
         return_value = self.decorated.status
-        if return_value == common.Status.SUCCESS:
+        if self.decorated.status == common.Status.RUNNING:
+            return common.Status.RUNNING
+        elif return_value == common.Status.SUCCESS:
             return common.Status.SUCCESS
         else:
             for i in range(self.idx+1, len(self.trace)):
