@@ -94,6 +94,8 @@ class ActionNode(Behaviour):
         # If started near the trap making it probable to bump into trap
         self.qtable[(3,1)][(0,1)] = 0.8
         self.qtable[(3,1)][(0,-1)] = 0.2
+        self.qtable[(3,0)][(0,1)] = 0.8
+        self.qtable[(3,0)][(0,-1)] = 0.2
 
     def setup(self, timeout, trace=None, i=0):
         """Have defined the setup method.
@@ -268,9 +270,9 @@ def simple_exp():
 
 
 def medium_exp():
-    mdp = init_mdp((0, 3))
+    mdp = init_mdp((3, 0))
     # goalspec = '(s33)|(true & (X (true U s33)))'
-    goalspec = '(G(!s32) & s33) | (G(!s32) & (X (G(!s32) U (G(!s31) & s32))))'
+    goalspec = '(G(!s32) & s33) | (G(!s32) & (X (G(!s32) U (G(!s32) & s33))))'
     bboard = blackboard.Client(name='cheese')
     bboard.register_key(key='trace', access=common.Access.WRITE)
     bboard.trace = []
@@ -367,7 +369,7 @@ def medium_exp():
         {'s33': False, 's32': False},
         {'s33': True, 's32': False},
         ]
-    bboard.trace = trace
+    # bboard.trace = trace
     parser = LTLfParser()
     formula = parser(goalspec)
     print(bboard.trace)
