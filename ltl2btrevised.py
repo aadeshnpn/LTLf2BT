@@ -283,7 +283,7 @@ class And(Decorator):
         # else
         ## return Success
         # This give access to the child class of decorator class
-        # print('and',self.idx, self.decorated.status)
+        # print(self.parent, self.children[0].children, self.name, self.idx, self.decorated.status)
         return self.decorated.status
 
 

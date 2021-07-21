@@ -291,7 +291,7 @@ def medium_exp():
         print(py_trees.display.ascii_tree(genbt[0].root))
         # recbt[0].root.children[1].reset()
         # genbt[0].root.children[0].children[0].children[0].reset()
-        setup_node(recbt[1:] + genbt[1:], [bboard.trace[-1]], k=0)
+        setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
         genbt[0].tick()
         print(
             i, genbt[0].root.status, bboard.trace,
@@ -363,10 +363,13 @@ def create_gen_bt(rbt, mdp):
     trap = PropConditionNode('s32')
     negtrap = Negation(trap, 'NegTrap')
     gtrap = Globally(negtrap, 'GTrap')
-
+    # Trap global constraint
+    trap3 = PropConditionNode('s32')
+    negtrap3 = Negation(trap3, 'NegTrap3')
+    gtrap3 = Globally(negtrap3, 'GTrap3')
     # Post condition
     pandseq = Sequence('PostCondAnd')
-    pandseq.add_children([gtrap, cheese])
+    pandseq.add_children([gtrap3, cheese])
     pand = And(pandseq)
 
     # Post action
@@ -393,14 +396,9 @@ def create_gen_bt(rbt, mdp):
     until = Until(anddec2)
     # Next
     # next = Next(until)
-    # Trap global constraint
-    trap3 = PropConditionNode('s32')
-    negtrap3 = Negation(trap3, 'NegTrap3')
-    gtrap3 = Globally(negtrap3, 'GTrap3')
-
     next = Finally(until)
-    parll1 = Sequence('TrueNext')
-    parll1.add_children([gtrap3, next])
+    parll1 = Sequence('TrueNext', memory=False)
+    parll1.add_children([gtrap, next])
     anddec1 = And(parll1,'ANDCHECK')
     # Root node
     main.add_children([pand, anddec1])
@@ -411,7 +409,7 @@ def create_gen_bt(rbt, mdp):
 
     py_trees.logging.level = py_trees.logging.Level.DEBUG
     # return bt, next, cheese, trap, trap1, trap2, trap3, gtrap, gtrap1, gtrap2, gtrap3
-    return bt, next, cheese, trap, gtrap, gtrap1, gtrap2, gtrap3
+    return bt, next, cheese, trap, gtrap, gtrap1, gtrap2, gtrap3, anddec1, anddec2, pand
 
 
 def main():
