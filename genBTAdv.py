@@ -141,9 +141,9 @@ def advance_exp():
     mdp = init_mdp((3, 0))
     # goalspec = '(s33)|(true & (X (true U s33)))'
     goalspec_cheese = '(G(!t) & c) | (G(!t) & (F (G(!t) U (G(!t) & c))))'
-    # goalspec_home = '(G(!t) & c & h) | (G(!t) & (F ((G(!t)) U (G(!t) & c & h))))'
-    # goalspec = '('+ goalspec_cheese + ') & X (' + goalspec_home +')'
-    goalspec = goalspec_cheese
+    goalspec_home = '(G(!t) & c & h) | (G(!t) & (F ((G(!t)) U (G(!t) & c & h))))'
+    goalspec = '('+ goalspec_cheese + ') & X (' + goalspec_home +')'
+    # goalspec = goalspec_home
     bboard = blackboard.Client(name='cheese')
     bboard.register_key(key='trace', access=common.Access.WRITE)
     bboard.trace = []
@@ -153,7 +153,7 @@ def advance_exp():
         {'c': False, 't': False, 'h':False},
         {'c': False, 't': False, 'h':False},
         {'c': True, 't': False, 'h':False},
-        # {'c': True, 't': False, 'h':True},
+        {'c': True, 't': False, 'h':True},
         # {'c': True, 't': False, 'h':True},
         # {'c': True, 't': False, 'h':True},
         # {'c': True, 't': False, 'h':True},
@@ -268,67 +268,7 @@ def create_rec_bt():
     bt = BehaviourTree(allgoal)
     print(py_trees.display.ascii_tree(bt.root))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
-    return bt, next, cheese, gtrap, gtrap1, gtrap2
-
-
-def create_gen_bt(rbt, mdp):
-    gmain = Selector('Main')
-    seqg = Sequence('SeqG')
-
-    main = Selector('GMain')
-    cheese = PropConditionNode('s33')
-    cheeseaction = ActionNode('s33', mdp)
-    # Trap global constraint
-    trap = PropConditionNode('s32')
-    negtrap = Negation(trap, 'NegTrap')
-    gtrap = Globally(negtrap, 'GTrap')
-    # Trap global constraint
-    trap3 = PropConditionNode('s32')
-    negtrap3 = Negation(trap3, 'NegTrap3')
-    gtrap3 = Globally(negtrap3, 'GTrap3')
-    # Post condition
-    pandseq = Sequence('PostCondAnd')
-    pandseq.add_children([gtrap3, cheese])
-    pand = And(pandseq)
-
-    # Post action
-    # Trap global constraint
-    trap1 = PropConditionNode('s32')
-    negtrap1 = Negation(trap1, 'NegTrap1')
-    gtrap1 = Globally(negtrap1, 'GTrap1')
-
-    aandseq = Sequence('PostActionAnd')
-    aandseq.add_children([gtrap1, cheeseaction])
-    aand = And(aandseq)
-
-    # Until
-    parll2 = Sequence('UntilAnd')
-    # Trap global constraint
-    trap2 = PropConditionNode('s32')
-    negtrap2 = Negation(trap2, 'NegTrap2')
-    gtrap2 = Globally(negtrap2, 'GTrap2')
-
-    untila = UntilA(gtrap2)
-    untilb = UntilB(aand)
-    parll2.add_children([untilb, untila])
-    anddec2 = And(parll2)
-    until = Until(anddec2)
-    # Next
-    # next = Next(until)
-    next = Finally(until)
-    parll1 = Sequence('TrueNext', memory=False)
-    parll1.add_children([gtrap, next])
-    anddec1 = And(parll1,'ANDCHECK')
-    # Root node
-    main.add_children([pand, anddec1])
-    seqg.add_children([main])
-    # gmain.add_children([rbt.root, seqg])
-    gmain.add_children([seqg])
-    bt = BehaviourTree(gmain)
-
-    py_trees.logging.level = py_trees.logging.Level.DEBUG
-    # return bt, next, cheese, trap, trap1, trap2, trap3, gtrap, gtrap1, gtrap2, gtrap3
-    return bt, next, cheese, trap, gtrap, gtrap1, gtrap2, gtrap3, anddec1, anddec2, pand
+    return bt, next, cheese, cheeseh, home, gtrap, gtrap1, gtrap2, gtrap1h, gtrap2h, gtraph, nexth
 
 
 def main():
