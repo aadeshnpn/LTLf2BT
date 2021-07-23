@@ -271,6 +271,99 @@ def create_rec_bt():
     return bt, next, cheese, cheeseh, home, gtrap, gtrap1, gtrap2, gtrap1h, gtrap2h, gtraph, nexth
 
 
+def create_gen_bt():
+    # goalspec_cheese = '(G(!t) & c) | (G(!t) & (F (G(!t) U (G(!t) & c))))'
+    # Cheese
+    main = Selector('RCMain')
+    cheese = PropConditionNode('c')
+    # Trap global constraint
+    trap = PropConditionNode('t')
+    negtrap = Negation(trap, 'NegTrap')
+    gtrap = Globally(negtrap, 'GTrap')
+
+    # Post condition
+    pandseq = Sequence('PostCondAnd')
+    pandseq.add_children([gtrap, cheese])
+    pand = And(pandseq)
+
+    # Until
+    # Trap global constraint
+    trap1 = PropConditionNode('t')
+    negtrap1 = Negation(trap1, 'NegTrap1')
+    gtrap1 = Globally(negtrap1, 'GTrap1')
+
+    parll2 = Sequence('UntilAnd')
+    untila = UntilA(gtrap1)
+    untilb = UntilB(copy.copy(pand))
+    parll2.add_children([untilb, untila])
+    anddec2 = And(parll2)
+    until = Until(anddec2)
+    # next = Next(until)
+    next = Finally(until)
+    parll1 = Sequence('TrueNext')
+    # Trap global constraint
+    trap2 = PropConditionNode('t')
+    negtrap2 = Negation(trap2, 'NegTrap2')
+    gtrap2 = Globally(negtrap2, 'GTrap2')
+
+    parll1.add_children([gtrap2, next])
+    anddec1 = And(parll1)
+    # Root node
+    main.add_children([pand, anddec1])
+
+    # From Cheese and home
+    # goalspec_cheese = '(G(!t) & c) |   (G(!t) & (F (G(!t) U (G(!t) & c))))'
+    # goalspec_home = '(G(!t) & c & h) | (G(!t) & (F ((G(!t)) U (G(!t) & c & h))))'
+
+    mainh = Selector('RHMain')
+    cheeseh = PropConditionNode('c')
+    # Trap global constraint
+    # trap = PropConditionNode('t')
+    home = PropConditionNode('h')
+    negtraph = Negation(copy.copy(trap), 'NegTrapH')
+    gtraph = Globally(negtraph, 'GTrapH')
+
+    # Post condition
+    pandseqh = Sequence('PostCondAndH')
+    pandseqh.add_children([gtraph, cheeseh, home])
+    pandh = And(pandseqh)
+
+    # Until
+    # Trap global constraint
+    trap1h = PropConditionNode('t')
+    negtrap1h = Negation(trap1h, 'NegTrap1H')
+    gtrap1h = Globally(negtrap1h, 'GTrap1H')
+
+    parll2h = Sequence('UntilAndH')
+    untilah = UntilA(gtrap1h)
+    untilbh = UntilB(copy.copy(pandh))
+    parll2h.add_children([untilbh, untilah])
+    anddec2h = And(parll2h)
+    untilh = Until(anddec2h)
+    # next = Next(until)
+    nexth = Finally(untilh)
+    parll1h = Sequence('TrueNextH')
+    # Trap global constraint
+    trap2h = PropConditionNode('t')
+    negtrap2h = Negation(trap2h, 'NegTrap2H')
+    gtrap2h = Globally(negtrap2h, 'GTrap2H')
+
+    parll1h.add_children([gtrap2h, nexth])
+    anddec1h = And(parll1h)
+    # Root node
+    mainh.add_children([pandh, anddec1h])
+    # goalspec = '('+ goalspec_cheese + ') & X (' + goalspec_home +')'
+    nextgoal = Next(mainh)
+
+    join = Sequence('Join')
+    join.add_children([main, nextgoal])
+    allgoal = And(join)
+    bt = BehaviourTree(allgoal)
+    print(py_trees.display.ascii_tree(bt.root))
+    # py_trees.logging.level = py_trees.logging.Level.DEBUG
+    return bt, next, cheese, cheeseh, home, gtrap, gtrap1, gtrap2, gtrap1h, gtrap2h, gtraph, nexth
+
+
 def main():
     advance_exp()
     # print(bt.root.status, blackboard1.trace)
