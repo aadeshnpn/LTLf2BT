@@ -271,11 +271,12 @@ def create_rec_bt():
     return bt, next, cheese, cheeseh, home, gtrap, gtrap1, gtrap2, gtrap1h, gtrap2h, gtraph, nexth
 
 
-def create_gen_bt():
+def create_gen_bt(mdp):
     # goalspec_cheese = '(G(!t) & c) | (G(!t) & (F (G(!t) U (G(!t) & c))))'
     # Cheese
     main = Selector('RCMain')
     cheese = PropConditionNode('c')
+    cheesea = ActionNode('c', mdp)
     # Trap global constraint
     trap = PropConditionNode('t')
     negtrap = Negation(trap, 'NegTrap')
