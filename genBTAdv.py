@@ -51,7 +51,7 @@ class ActionNode(Behaviour):
         # self.qtable[(3,1)][(0,-1)] = 0.2
         # self.qtable[(3,0)][(0,1)] = 0.8
         # self.qtable[(3,0)][(0,-1)] = 0.2
-        # self.step = 0
+        self.step = 0
         # Update the qtable with a learned policy
         self.qtable.update(qtable)
 
@@ -93,12 +93,11 @@ class ActionNode(Behaviour):
         self.env.curr_loc = s1
         self.step += 1
         # if self.blackboard.trace[-1][self.action_symbol]:
-        if 's'+str(s1[0])+str(s1[1]) == self.action_symbol:
+        if self.env.state_map[self.action_symbol] == 's'+str(s1[0])+str(s1[1]):
             # self.blackboard.trace.append(self.env.generate_props_loc(s1))
             return common.Status.SUCCESS
         # elif 's'+str(s1[0])+str(s1[1]) == 's32':
-        elif self.step >=10:
-            # self.blackboard.trace.append(self.env.generate_props_loc(s1))
+        elif self.step >=6:            # self.blackboard.trace.append(self.env.generate_props_loc(s1))
             return common.Status.FAILURE
         else:
             return common.Status.RUNNING
@@ -173,19 +172,13 @@ def advance_exp():
     bboard = blackboard.Client(name='cheese')
     bboard.register_key(key='trace', access=common.Access.WRITE)
     bboard.trace = []
-    print(mdp.generate_default_props(), mdp.curr_loc)
-    mdp.step((1, 0))
-    print(mdp.generate_default_props(), mdp.curr_loc)
-    mdp.step((1, 0))
-    print(mdp.generate_default_props(), mdp.curr_loc)
-    mdp.step((1, 0))
-    print(mdp.generate_default_props(), mdp.curr_loc)
-    exit()
-    # bboard.trace.append(mdp.generate_default_props())
+    bboard.trace.append(mdp.generate_default_props())
     trace = [
         {'c': False, 't': False, 'h':False},
         {'c': False, 't': False, 'h':False},
         {'c': False, 't': False, 'h':False},
+        {'c': True, 't': False, 'h':False},
+        {'c': True, 't': False, 'h':False},
         {'c': True, 't': False, 'h':False},
         {'c': True, 't': False, 'h':True},
         # {'c': True, 't': False, 'h':True},
@@ -193,15 +186,24 @@ def advance_exp():
         # {'c': True, 't': False, 'h':True},
         # {'c': True, 't': False, 'h':True},
         ]
-    bboard.trace = trace
+    # bboard.trace = trace
     recbt = create_rec_bt()
+    # for i in range(1):
+    #     # print(py_trees.display.ascii_tree(genbt[0].root))
+    #     recbt[0].root.children[0].children[1].reset()
+    #     # genbt[0].root.children[0].children[0].children[1].reset()
+    #     setup_node(recbt[1:], bboard.trace, k=0)
+    #     recbt[0].tick()
+    #     print(bboard.trace, mdp.curr_loc)
+
     genbt = create_gen_bt(recbt[0], mdp)
-    for i in range(1):
+    for i in range(5):
         # print(py_trees.display.ascii_tree(genbt[0].root))
-        # recbt[0].root.children[1].reset()
-        # genbt[0].root.children[0].children[0].children[0].reset()
-        setup_node(recbt[1:], bboard.trace, k=0)
-        recbt[0].tick()
+        recbt[0].root.children[0].children[1].reset()
+        # genbt[0].root.children[0].children[0].children[1].reset()
+        setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
+        genbt[0].tick()
+        print(bboard.trace, mdp.curr_loc)
         # print(
         #     i, genbt[0].root.status, bboard.trace,
         #     [(a.name, a.status) for a in genbt[3:]])
@@ -210,6 +212,7 @@ def advance_exp():
     formula = parser(goalspec)
     print(bboard.trace)
     print(formula.truth(bboard.trace), recbt[0].root.status)
+    print(formula.truth(bboard.trace), genbt[0].root.status)
 
 
 def create_rec_bt():
@@ -300,7 +303,7 @@ def create_rec_bt():
     join.add_children([main, nextgoal])
     allgoal = And(join)
     bt = BehaviourTree(allgoal)
-    print(py_trees.display.ascii_tree(bt.root))
+    # print(py_trees.display.ascii_tree(bt.root))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
     return bt, next, cheese, cheeseh, home, gtrap, gtrap1, gtrap2, gtrap1h, gtrap2h, gtraph, nexth
 
@@ -334,10 +337,10 @@ def get_qtable_home(mdp):
 def create_gen_bt(recbt, mdp):
     gensel = Selector('Generator')
     genseq = Sequence('GMain')
-    qtable_cheese = get_qtable_cheese(copy.copy(mdp.qtable))
-    qtable_home = get_qtable_home(copy.copy(mdp.qtable))
-    cheeseact = ActionNode('c', mdp, qtable=[])
-    homeact = ActionNode('h', mdp, qtable=[])
+    qtable_cheese = get_qtable_cheese(mdp)
+    qtable_home = get_qtable_home(mdp)
+    cheeseact = ActionNode('c', mdp, qtable=qtable_cheese)
+    homeact = ActionNode('h', mdp, qtable=qtable_home)
 
     # Almost same to recognizer but need to add action node
     main = Selector('RCMain')
@@ -443,10 +446,11 @@ def create_gen_bt(recbt, mdp):
     allgoal = And(join)
 
     genseq.add_children([allgoal])
-    gensel.add_children([recbt, genseq])
+    # gensel.add_children([recbt.root, genseq])
+    gensel.add_children([genseq])
     bt = BehaviourTree(gensel)
     print(py_trees.display.ascii_tree(bt.root))
-    # py_trees.logging.level = py_trees.logging.Level.DEBUG
+    py_trees.logging.level = py_trees.logging.Level.DEBUG
     return (
         bt, next, cheese, cheeseh, cheeseha, home, gtrap,
         gtrap1, gtrap2, gtrap1h, gtrap2h, gtraph, gtrapha,
