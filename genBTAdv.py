@@ -7,7 +7,7 @@ import pickle
 
 # from joblib import Parallel, delayed
 
-from mdp import GridMDP, GridMDPModfy, orientations, dictmax, create_policy
+from mdp import GridMDPModfySeq, GridMDPModfy, orientations, dictmax, create_policy
 
 from ltl2btrevised import (
     Globally, Finally, Negation, Next, PropConditionNode,
@@ -131,6 +131,32 @@ def init_mdp(sloc):
     return mdp
 
 
+def init_mdp_seq(sloc):
+    """Initialized a simple MDP world."""
+    grid = np.ones((4, 4)) * -0.04
+
+    # Obstacles
+    grid[3][0] = None
+    grid[2][2] = None
+    grid[1][1] = None
+
+    # Cheese and trapfinallya
+    grid[0][3] = None
+    grid[1][3] = None
+
+    grid = np.where(np.isnan(grid), None, grid)
+    grid = grid.tolist()
+
+    # Terminal and obstacles defination
+    grid[0][3] = +2
+    grid[1][3] = -2
+
+    mdp = GridMDPModfySeq(
+        grid, terminals=[None, None], startloc=sloc)
+
+    return mdp
+
+
 def setup_node(nodes, trace, k):
     for node in nodes:
         # print(node, node.name, trace)
@@ -138,7 +164,7 @@ def setup_node(nodes, trace, k):
 
 
 def advance_exp():
-    mdp = init_mdp((3, 0))
+    mdp = init_mdp_seq((0, 3))
     # goalspec = '(s33)|(true & (X (true U s33)))'
     goalspec_cheese = '(G(!t) & c) | (G(!t) & (F (G(!t) U (G(!t) & c))))'
     goalspec_home = '(G(!t) & c & h) | (G(!t) & (F ((G(!t)) U (G(!t) & c & h))))'
@@ -147,6 +173,14 @@ def advance_exp():
     bboard = blackboard.Client(name='cheese')
     bboard.register_key(key='trace', access=common.Access.WRITE)
     bboard.trace = []
+    print(mdp.generate_default_props(), mdp.curr_loc)
+    mdp.step((1, 0))
+    print(mdp.generate_default_props(), mdp.curr_loc)
+    mdp.step((1, 0))
+    print(mdp.generate_default_props(), mdp.curr_loc)
+    mdp.step((1, 0))
+    print(mdp.generate_default_props(), mdp.curr_loc)
+    exit()
     # bboard.trace.append(mdp.generate_default_props())
     trace = [
         {'c': False, 't': False, 'h':False},
@@ -271,7 +305,6 @@ def create_rec_bt():
     return bt, next, cheese, cheeseh, home, gtrap, gtrap1, gtrap2, gtrap1h, gtrap2h, gtraph, nexth
 
 
-<<<<<<< HEAD
 def get_qtable_cheese(mdp):
     qtable = dict()
     for state in mdp.states:
@@ -309,14 +342,6 @@ def create_gen_bt(recbt, mdp):
     # Almost same to recognizer but need to add action node
     main = Selector('RCMain')
     cheese = PropConditionNode('c')
-=======
-def create_gen_bt(mdp):
-    # goalspec_cheese = '(G(!t) & c) | (G(!t) & (F (G(!t) U (G(!t) & c))))'
-    # Cheese
-    main = Selector('RCMain')
-    cheese = PropConditionNode('c')
-    cheesea = ActionNode('c', mdp)
->>>>>>> 332779d539efe85e1a632d3919212fabb2693086
     # Trap global constraint
     trap = PropConditionNode('t')
     negtrap = Negation(trap, 'NegTrap')
@@ -327,7 +352,6 @@ def create_gen_bt(mdp):
     pandseq.add_children([gtrap, cheese])
     pand = And(pandseq)
 
-<<<<<<< HEAD
     # Post condition and action
     trapa = PropConditionNode('t')
     negtrapa = Negation(trapa, 'NegTrap')
@@ -336,8 +360,6 @@ def create_gen_bt(mdp):
     pandseqa.add_children([gtrapa, cheeseact])
     panda = And(pandseqa)
 
-=======
->>>>>>> 332779d539efe85e1a632d3919212fabb2693086
     # Until
     # Trap global constraint
     trap1 = PropConditionNode('t')
@@ -346,11 +368,7 @@ def create_gen_bt(mdp):
 
     parll2 = Sequence('UntilAnd')
     untila = UntilA(gtrap1)
-<<<<<<< HEAD
     untilb = UntilB(panda)
-=======
-    untilb = UntilB(copy.copy(pand))
->>>>>>> 332779d539efe85e1a632d3919212fabb2693086
     parll2.add_children([untilb, untila])
     anddec2 = And(parll2)
     until = Until(anddec2)
@@ -373,10 +391,7 @@ def create_gen_bt(mdp):
 
     mainh = Selector('RHMain')
     cheeseh = PropConditionNode('c')
-<<<<<<< HEAD
     cheeseha = PropConditionNode('c')
-=======
->>>>>>> 332779d539efe85e1a632d3919212fabb2693086
     # Trap global constraint
     # trap = PropConditionNode('t')
     home = PropConditionNode('h')
@@ -388,7 +403,6 @@ def create_gen_bt(mdp):
     pandseqh.add_children([gtraph, cheeseh, home])
     pandh = And(pandseqh)
 
-<<<<<<< HEAD
     # Post condition and action
     pandseqha = Sequence('PostCondAndH')
     trapha = PropConditionNode('t')
@@ -397,8 +411,6 @@ def create_gen_bt(mdp):
     pandseqha.add_children([gtrapha, cheeseha, homeact])
     pandha = And(pandseqha)
 
-=======
->>>>>>> 332779d539efe85e1a632d3919212fabb2693086
     # Until
     # Trap global constraint
     trap1h = PropConditionNode('t')
@@ -407,11 +419,7 @@ def create_gen_bt(mdp):
 
     parll2h = Sequence('UntilAndH')
     untilah = UntilA(gtrap1h)
-<<<<<<< HEAD
     untilbh = UntilB(pandha)
-=======
-    untilbh = UntilB(copy.copy(pandh))
->>>>>>> 332779d539efe85e1a632d3919212fabb2693086
     parll2h.add_children([untilbh, untilah])
     anddec2h = And(parll2h)
     untilh = Until(anddec2h)
@@ -433,7 +441,6 @@ def create_gen_bt(mdp):
     join = Sequence('Join')
     join.add_children([main, nextgoal])
     allgoal = And(join)
-<<<<<<< HEAD
 
     genseq.add_children([allgoal])
     gensel.add_children([recbt, genseq])
@@ -445,13 +452,6 @@ def create_gen_bt(mdp):
         gtrap1, gtrap2, gtrap1h, gtrap2h, gtraph, gtrapha,
         gtrapa, nexth
     )
-=======
-    bt = BehaviourTree(allgoal)
-    print(py_trees.display.ascii_tree(bt.root))
-    # py_trees.logging.level = py_trees.logging.Level.DEBUG
-    return bt, next, cheese, cheeseh, home, gtrap, gtrap1, gtrap2, gtrap1h, gtrap2h, gtraph, nexth
-
->>>>>>> 332779d539efe85e1a632d3919212fabb2693086
 
 def main():
     advance_exp()
