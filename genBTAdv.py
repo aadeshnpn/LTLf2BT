@@ -165,8 +165,8 @@ def setup_node(nodes, trace, k):
 def advance_exp():
     mdp = init_mdp_seq((0, 3))
     # goalspec = '(s33)|(true & (X (true U s33)))'
-    goalspec_cheese = '(G(!t) & c) | (G(!t) & (F (G(!t) U (G(!t) & c))))'
-    goalspec_home = '(G(!t) & c & h) | (G(!t) & (F ((G(!t)) U (G(!t) & c & h))))'
+    goalspec_cheese = '(G(!t) & c) | (G(!t) & (X (G(!t) U (G(!t) & c))))'
+    goalspec_home = '(G(!t) & c & h) | (G(!t) & (X ((G(!t)) U (G(!t) & c & h))))'
     goalspec = '('+ goalspec_cheese + ') & X (' + goalspec_home +')'
     # goalspec = goalspec_home
     bboard = blackboard.Client(name='cheese')
@@ -174,7 +174,7 @@ def advance_exp():
     bboard.trace = []
     bboard.trace.append(mdp.generate_default_props())
     trace = [
-        {'c': False, 't': False, 'h':True},
+        {'c': False, 't': False, 'h':False},
         {'c': False, 't': False, 'h':False},
         {'c': False, 't': False, 'h':False},
         {'c': True, 't': False, 'h':False},
@@ -238,8 +238,8 @@ def create_rec_bt():
     parll2.add_children([untilb, untila])
     anddec2 = And(parll2)
     until = Until(anddec2)
-    # next = Next(until)
-    next = Finally(until)
+    next = Next(until)
+    # next = Finally(until)
     parll1 = Sequence('TrueNext')
     # Trap global constraint
     trap2 = PropConditionNode('t')
@@ -280,8 +280,8 @@ def create_rec_bt():
     parll2h.add_children([untilbh, untilah])
     anddec2h = And(parll2h)
     untilh = Until(anddec2h)
-    # next = Next(until)
-    nexth = Finally(untilh)
+    nexth = Next(untilh)
+    # nexth = Finally(untilh)
     parll1h = Sequence('TrueNextH')
     # Trap global constraint
     trap2h = PropConditionNode('t')
@@ -371,8 +371,8 @@ def create_gen_bt(recbt, mdp):
     parll2.add_children([untilb, untila])
     anddec2 = And(parll2)
     until = Until(anddec2)
-    # next = Next(until)
-    next = Finally(until)
+    next = Next(until)
+    # next = Finally(until)
     parll1 = Sequence('TrueNext')
     # Trap global constraint
     trap2 = PropConditionNode('t')
@@ -422,8 +422,8 @@ def create_gen_bt(recbt, mdp):
     parll2h.add_children([untilbh, untilah])
     anddec2h = And(parll2h)
     untilh = Until(anddec2h)
-    # next = Next(until)
-    nexth = Finally(untilh)
+    nexth = Next(untilh)
+    # nexth = Finally(untilh)
     parll1h = Sequence('TrueNextH')
     # Trap global constraint
     trap2h = PropConditionNode('t')
