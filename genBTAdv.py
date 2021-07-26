@@ -174,17 +174,13 @@ def advance_exp():
     bboard.trace = []
     bboard.trace.append(mdp.generate_default_props())
     trace = [
-        {'c': False, 't': False, 'h':False},
+        {'c': False, 't': False, 'h':True},
         {'c': False, 't': False, 'h':False},
         {'c': False, 't': False, 'h':False},
         {'c': True, 't': False, 'h':False},
         {'c': True, 't': False, 'h':False},
         {'c': True, 't': False, 'h':False},
         {'c': True, 't': False, 'h':True},
-        # {'c': True, 't': False, 'h':True},
-        # {'c': True, 't': False, 'h':True},
-        # {'c': True, 't': False, 'h':True},
-        # {'c': True, 't': False, 'h':True},
         ]
     # bboard.trace = trace
     recbt = create_rec_bt()
@@ -197,7 +193,7 @@ def advance_exp():
     #     print(bboard.trace, mdp.curr_loc)
 
     genbt = create_gen_bt(recbt[0], mdp)
-    for i in range(5):
+    for i in range(6):
         # print(py_trees.display.ascii_tree(genbt[0].root))
         recbt[0].root.children[0].children[1].reset()
         # genbt[0].root.children[0].children[0].children[1].reset()
@@ -446,8 +442,8 @@ def create_gen_bt(recbt, mdp):
     allgoal = And(join)
 
     genseq.add_children([allgoal])
-    # gensel.add_children([recbt.root, genseq])
-    gensel.add_children([genseq])
+    gensel.add_children([recbt.root, genseq])
+    # gensel.add_children([genseq])
     bt = BehaviourTree(gensel)
     print(py_trees.display.ascii_tree(bt.root))
     py_trees.logging.level = py_trees.logging.Level.DEBUG
