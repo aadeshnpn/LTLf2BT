@@ -856,6 +856,176 @@ class GridMDPFire(MDP):
         return self.to_grid({s: chars[a] for (s, a) in policy.items()})
 
 
+class GridMDPCheeseBeans(MDP):
+
+    def __init__(
+            self, grid, terminals, init=(0, 0),
+            gamma=.9, startloc=(3, 0), seed=None):
+
+        grid.reverse()     # because we want row 0 on bottom, not on top
+        reward = {}
+        states = set()
+        if seed is None:
+            self.nprandom = np.random.RandomState()  # pylint: disable=E1101
+        else:
+            self.nprandom = np.random.RandomState(   # pylint: disable=E1101
+                seed)
+        self.rows = len(grid)
+        self.cols = len(grid[0])
+        self.grid = grid
+        for x in range(self.cols):
+            for y in range(self.rows):
+                if grid[y][x]:
+                    states.add((x, y))
+                    reward[(x, y)] = grid[y][x]
+        self.states = states
+        actlist = orientations
+        transitions = {}
+        # Goal related
+        # self.goalspec = goalspec
+        self.startloc = startloc
+        self.curr_loc = self.startloc
+
+        if len(terminals) >= 2:
+            self.ext = terminals[0]
+            self.fire = terminals[1]
+        else:
+            self.ext = None
+            self.fire = None
+
+        for s in states:
+            transitions[s] = {}
+            for a in actlist:
+                transitions[s][a] = self.calculate_T(s, a)
+        # print(reward)
+        self.backup_reward = reward.copy()
+        self.terminals = terminals
+        MDP.__init__(self, init, actlist=actlist,
+                     terminals=[terminals[1]], transitions=transitions,
+                     reward=reward, states=states, gamma=gamma)
+        self.reward_swap = False
+        self.action_dict = {
+            'S': (1, 0),
+            'E': (0, 1),
+            'N': (-1, 0),
+            'W': (0, -1)
+        }
+        self.env_action_dict = {
+            0: (1, 0),
+            1: (0, 1),
+            2: (-1, 0),
+            3: (0, -1)
+        }
+        self.state_dict = dict()
+        self.curr_reward = self.reward[self.startloc]
+        self.state_keyslist = ['s'+str(i)+str(j) for i in range(self.rows) for j in range(self.cols)]
+        home = 's'+ str(self.startloc[0]) + str(self.startloc[1])
+        self.state_map = {'c': 's33', 'b': 's20', 'h': home}
+        self.default_props = dict(zip(self.state_keyslist, [False] * len(self.state_keyslist)))
+        self.carrying_cheese = False
+        self.carrying_beans = False
+
+    def update_props(self, props):
+        if not self.carrying_cheese and props[self.state_map['c']]:
+            self.carrying_cheese = True
+            props[self.state_map['c']] = True
+
+        if not self.carrying_beans and props[self.state_map['b']]:
+            self.carrying_beans = True
+            props[self.state_map['b']] = True
+
+        return props
+
+    def generate_default_props(self):
+        props = copy.copy(self.default_props)
+        props[self.get_state_keys(self.curr_loc)] = True
+        props = self.update_props(props)
+        return dict(zip(
+                self.state_map.keys(),
+                [props[v] for v in self.state_map.values()])
+                )
+
+    def generate_props_loc(self, loc):
+        props = copy.copy(self.default_props)
+        props[self.get_state_keys(loc)] = True
+        props = self.update_props(props)
+        return dict(zip(
+                self.state_map.keys(),
+                [props[v] for v in self.state_map.values()])
+                )
+
+    def get_state_keys(self, loc):
+        return  's' + str(loc[0])+str(loc[1])
+
+    def R(self, state):
+        """Return a numeric reward for this state."""
+        if (state == self.cheese and self.reward_swap is False) :
+            r = self.reward[state]
+            self.reward[state] = self.reward[self.startloc]
+            self.reward[self.startloc] = r
+            self.reward_swap = True
+            return r
+        else:
+            return self.reward[state]
+
+    def calculate_T(self, state, action, fp=0.8, lp=0.1, rp=0.1, bp=0.0):
+        if action:
+            return [(fp, self.go(state, action)),
+                    (rp, self.go(state, turn_right(action))),
+                    (lp, self.go(state, turn_left(action)))]
+        else:
+            return [(0.0, state)]
+
+    def step(self, action):
+        # print(self.curr_loc)
+        done = False
+        if self.curr_loc in self.terminals:
+            done = True
+            self.curr_reward = self.R(self.curr_loc)
+            return self.curr_loc, self.curr_reward, done, None
+        p, s1 = zip(*self.T(self.curr_loc, action))
+        p, s1 = list(p), list(s1)
+        indx = list(range(len(s1)))
+        indx = self.nprandom.choice(indx, p=p)
+        next_state = s1[indx]
+        self.curr_loc = next_state
+        if self.startloc in self.terminals:
+            done = True
+        self.curr_reward = self.R(next_state)
+        return self.curr_loc, self.curr_reward, done, None
+
+    def T(self, state, action):
+        return self.transitions[state][action] if action else [(0.0, state)]
+
+    def go(self, state, direction):
+        """Return the state that results from going in this direction."""
+
+        state1 = vector_add(state, direction)
+        return state1 if state1 in self.states else state
+
+    def to_grid(self, mapping):
+        """Convert a mapping from (x, y) to v into a [[..., v, ...]] grid."""
+
+        return list(reversed([[mapping.get((x, y), 'W')
+                               for x in range(self.cols)]
+                              for y in range(self.rows)]))
+
+    def restart(self):
+        self.curr_loc = self.startloc
+        self.reward = self.backup_reward.copy()
+        self.reward_swap = False
+        # self.cheese = self.terminals[0]
+        self.curr_reward = self.reward[self.startloc]
+
+    def to_arrows(self, policy):
+        # EAST, NORTH, WEST, SOUTH = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+        # Right, Up, Left, Down
+        chars = {
+            (1, 0): '>', (0, 1): '^',
+            (-1, 0): '<', (0, -1): 'v', None: '.'}
+        return self.to_grid({s: chars[a] for (s, a) in policy.items()})
+
+
 """Helpful classes for the MDP world."""
 
 
