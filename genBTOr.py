@@ -186,47 +186,52 @@ def setup_node(nodes, trace, k):
 
 def advance_exp():
     mdp = init_mdp_seq((0, 1))
-    goalspec = '(e & f) | (true & (X ( !f U (e & f) ) ))'
+    # goalspec = '(e & f) | (true & (X ( !f U (e & f) ) ))'
+    goalspec_cheese = '(G(!ct) & c) | (G(!ct) & (X (G(!ct) U (G(!ct) & c))))'
+    goalspec_beans = '(G(!bt) & b) | (G(!bt) & (X (G(!bt) U (G(!bt) & b))))'
+    goalspec_home = '(G(!bt & !ct) & (c|b) & h) | (G(!bt & !ct) & (X (G(!bt & !ct) U (G(!bt & !ct) & (c|b) & h))))'
+    # goalspec = '('+ goalspec_cheese + ') & X (' + goalspec_home +')'
+    goalspec = '(('+ goalspec_cheese + ') | (' + goalspec_beans +')) & X (' + goalspec_home +')'
     bboard = blackboard.Client(name='fire')
     bboard.register_key(key='trace', access=common.Access.WRITE)
     bboard.trace = []
     bboard.trace.append(mdp.generate_default_props())
     trace = [
-        {'e': False, 'f': False, },
-        {'e': False, 'f': False, },
-        {'e': False, 'f': False, },
-        {'e': True, 'f': False, },
-        {'e': True, 'f': False, },
-        {'e': True, 'f': True, },
+        {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
+        {'c': False, 'b': False, 'h':False,'ct': False, 'bt':False},
+        {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
+        {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
+        {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
+        {'c': False, 'b': True, 'h':True, 'ct': False, 'bt':False},
         ]
-    # bboard.trace = trace
-    recbt = create_rec_bt()
-    # for i in range(2):
+    bboard.trace = trace
+    # recbt = create_rec_bt()
+    # # for i in range(2):
+    # #     # print(py_trees.display.ascii_tree(genbt[0].root))
+    # #     [node.reset() for node in recbt[0].root.children]
+    # #     recbt[0].root.children[1].reset()
+    # #     # genbt[0].root.children[0].children[0].children[1].reset()
+    # #     setup_node(recbt[1:], bboard.trace, k=0)
+    # #     recbt[0].tick()
+    # #     print(bboard.trace, mdp.curr_loc, recbt[0].root.status)
+
+    # genbt = create_gen_bt(recbt[0], mdp)
+    # for i in range(5):
     #     # print(py_trees.display.ascii_tree(genbt[0].root))
     #     [node.reset() for node in recbt[0].root.children]
-    #     recbt[0].root.children[1].reset()
     #     # genbt[0].root.children[0].children[0].children[1].reset()
-    #     setup_node(recbt[1:], bboard.trace, k=0)
-    #     recbt[0].tick()
-    #     print(bboard.trace, mdp.curr_loc, recbt[0].root.status)
-
-    genbt = create_gen_bt(recbt[0], mdp)
-    for i in range(5):
-        # print(py_trees.display.ascii_tree(genbt[0].root))
-        [node.reset() for node in recbt[0].root.children]
-        # genbt[0].root.children[0].children[0].children[1].reset()
-        setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
-        genbt[0].tick()
-        print('Tick',i, bboard.trace, mdp.curr_loc)
-        # print(
-        #     i, genbt[0].root.status, bboard.trace,
-        #     [(a.name, a.status) for a in genbt[3:]])
+    #     setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
+    #     genbt[0].tick()
+    #     print('Tick',i, bboard.trace, mdp.curr_loc)
+    #     # print(
+    #     #     i, genbt[0].root.status, bboard.trace,
+    #     #     [(a.name, a.status) for a in genbt[3:]])
 
     parser = LTLfParser()
     formula = parser(goalspec)
-    print(bboard.trace)
-    print('GEN', formula.truth(bboard.trace), genbt[0].root.status)
-    print('REC', formula.truth(bboard.trace), recbt[0].root.status)
+    print(formula.truth(bboard.trace), formula)
+    # print('GEN', formula.truth(bboard.trace), genbt[0].root.status)
+    # print('REC', formula.truth(bboard.trace), recbt[0].root.status)
 
 
 def create_rec_bt():
