@@ -152,7 +152,6 @@ def init_mdp_seq(sloc):
     grid = np.ones((4, 4)) * -0.04
 
     # Obstacles
-    grid[3][0] = None
     grid[2][2] = None
     grid[1][1] = None
 
@@ -185,8 +184,34 @@ def setup_node(nodes, trace, k):
 
 
 def advance_exp():
-    mdp = init_mdp_seq((0, 1))
-    # goalspec = '(e & f) | (true & (X ( !f U (e & f) ) ))'
+    mdp = init_mdp_seq((0, 2))
+    ctable = get_qtable_cheese(mdp)
+    btable = get_qtable_beans(mdp)
+    htable = get_qtable_home(mdp)
+    # for i in range(8):
+    #     action = dictmax(ctable[mdp.curr_loc], s='key')
+    #     print(i, mdp.curr_loc, end=' ')
+    #     _ = mdp.step(action)
+    #     print(mdp.curr_loc)
+    # if mdp.curr_loc == (3,3):
+    #     for j in range(8):
+    #         action = dictmax(htable[mdp.curr_loc], s='key')
+    #         print(j, mdp.curr_loc, end=' ')
+    #         _ = mdp.step(action)
+    #         print(mdp.curr_loc)
+    # else:
+    #     for j in range(8):
+    #         action = dictmax(btable[mdp.curr_loc], s='key')
+    #         print(j, mdp.curr_loc, end=' ')
+    #         _ = mdp.step(action)
+    #         print(mdp.curr_loc)
+    #     for j in range(8):
+    #         action = dictmax(htable[mdp.curr_loc], s='key')
+    #         print(i, mdp.curr_loc, end=' ')
+    #         _ = mdp.step(action)
+    #         print(mdp.curr_loc)
+        # print(_)
+        # goalspec = '(e & f) | (true & (X ( !f U (e & f) ) ))'
     goalspec_cheese = '(G(!ct) & c) | (G(!ct) & (X (G(!ct) U (G(!ct) & c))))'
     goalspec_beans = '(G(!bt) & b) | (G(!bt) & (X (G(!bt) U (G(!bt) & b))))'
     goalspec_home = '((c | b) & h) | (true & (X ((F(G(!ct) & c) | F(G(!bt) & b)) U ((c|b) & h))))'
@@ -208,8 +233,8 @@ def advance_exp():
         ]
     bboard.trace = trace
     # recbt = create_rec_bt()
-    # recbt = cheese_bt()
-    # recbt = beans_bt()
+    recbt = cheese_bt()
+    recbt = beans_bt()
     recbt = home_bt()
     for i in range(1):
         # print(py_trees.display.ascii_tree(genbt[0].root))
@@ -233,7 +258,7 @@ def advance_exp():
     #     #     [(a.name, a.status) for a in genbt[3:]])
 
     parser = LTLfParser()
-    formula = parser(goalspec_until)
+    formula = parser(goalspec_home)
     # print(formula.truth(bboard.trace), formula)
     # print('GEN', formula.truth(bboard.trace), genbt[0].root.status)
     print('REC', formula, formula.truth(bboard.trace), recbt[0].root.status)
@@ -253,7 +278,7 @@ def cheese_bt(rec=True, env=None, qtable=None):
     pand = And(pandseq)
 
     if not rec:
-        cheeseact = ActionNode('c', env, qtable)
+        cheeseact = ActionNode('c', env, get_qtable_cheese())
         ctrapa = PropConditionNode('t')
         negctrapa = Negation(ctrapa, 'NegCTrap')
         gctrapa = Globally(negctrapa, 'GCTrap')
@@ -305,7 +330,7 @@ def beans_bt(rec=True, env=None, qtable=None):
     pand = And(pandseq)
 
     if not rec:
-        beansact = ActionNode('b', env, qtable)
+        beansact = ActionNode('b', env, get_qtable_beans())
         btrapa = PropConditionNode('bt')
         negbtrapa = Negation(btrapa, 'NegBTrap')
         gbtrapa = Globally(negbtrapa, 'GBTrap')
@@ -358,7 +383,7 @@ def home_bt(rec=True, env=None, qtable=None):
     pand = And(pandseq)
 
     if not rec:
-        beansact = ActionNode('h', env, qtable)
+        beansact = ActionNode('h', env, get_qtable_home())
         pandseqa = Sequence('PostCondActionB')
         pandsela = Selector('PostCondActionOrB')
         pandsela.add_children([cheese[1], beans[1]])
@@ -409,86 +434,80 @@ def home_bt(rec=True, env=None, qtable=None):
     return (bt, *cheese, *beans, *home, next, fincb, fincc)
 
 
-def get_qtable_ext(mdp):
+def get_qtable_cheese(mdp):
     qtable = dict()
     for state in mdp.states:
         qtable[state] = dict(zip(orientations, [0, 0, 0, 0]))
-    for i in range(0,4):
-        qtable[(i,3)][(1,0)] = 1
-    qtable[(3,1)][(0,1)] = 0.8
-    qtable[(3,1)][(0,-1)] = 0.2
-    qtable[(3,0)][(0,1)] = 0.8
-    qtable[(3,0)][(0,-1)] = 0.2
+    qtable[(0,3)][(1,0)] = 1.0
+    qtable[(1,3)][(1,0)] = 1.0
+    if mdp.reward[(2,3)] ==-2:
+        qtable[(2,3)][(0,1)] = 1.0
+    else:
+        qtable[(2,3)][(1,0)] = 1.0
+    qtable[(3,3)][(1,0)] = 1.0
+
+    qtable[(0,2)][(0,1)] = 1.0
+    qtable[(0,1)][(0,1)] = 1.0
+    qtable[(0,0)][(0,1)] = 1.0
+
+    qtable[(1,0)][(-1,0)] = 1.0
+    qtable[(2,0)][(-1,0)] = 1.0
+
     return qtable
 
 
-def get_qtable_fire(mdp):
+def get_qtable_beans(mdp):
     qtable = dict()
     for state in mdp.states:
         qtable[state] = dict(zip(orientations, [0, 0, 0, 0]))
-    for i in range(0,4):
-        qtable[(3,i)][(0,-1)] = 1
-    # qtable[(3,1)][(0,1)] = 0.8
-    # qtable[(3,1)][(0,-1)] = 0.2
-    # qtable[(3,0)][(0,1)] = 0.8
-    # qtable[(3,0)][(0,-1)] = 0.2
+
+    qtable[(1,0)][(1,0)] = 1.0
+    if mdp.reward[(2,0)] ==-2:
+        qtable[(2,0)][(-1,0)] = 1.0
+    else:
+        qtable[(2,0)][(1,0)] = 1.0
+    qtable[(3,0)][(-1,0)] = 1.0
+
+    qtable[(0,2)][(0,-1)] = 1.0
+    qtable[(0,1)][(0,-1)] = 1.0
+    qtable[(0,0)][(1,0)] = 1.0
+
+    qtable[(0,3)][(0,-1)] = 1.0
+    qtable[(1,3)][(-1,0)] = 1.0
+    qtable[(2,3)][(-1,0)] = 1.0
+
+    return qtable
+
+
+def get_qtable_home(mdp):
+    qtable = dict()
+    for state in mdp.states:
+        qtable[state] = dict(zip(orientations, [0, 0, 0, 0]))
+
+    qtable[(3,3)][(-1,0)] = 1.0
+    qtable[(2,3)][(-1,0)] = 1.0
+    qtable[(1,3)][(-1,0)] = 1.0
+    qtable[(0,3)][(0,-1)] = 1.0
+    qtable[(0,2)][(-1,0)] = 1.0
+
+    qtable[(3,0)][(-1,0)] = 1.0
+    qtable[(2,0)][(-1,0)] = 1.0
+    qtable[(1,0)][(-1,0)] = 1.0
+    qtable[(0,0)][(0,1)] = 1.0
+    qtable[(0,1)][(0,1)] = 1.0
+    qtable[(0,2)][(-1,0)] = 1.0
+
     return qtable
 
 
 def create_gen_bt(recbt, mdp):
     gensel = Selector('Generator')
     genseq = Sequence('GMain')
-    qtable_ext = get_qtable_ext(mdp)
-    qtable_fire = get_qtable_fire(mdp)
-    extact = ActionNode('e', mdp, qtable=qtable_ext)
-    fireact = ActionNode('f', mdp, qtable=qtable_fire)
 
-    # Ext and Fire
-    main = Selector('GCMain')
-    ext = PropConditionNode('e')
-    # Trap global constraint
-    fire = PropConditionNode('f')
-
-    # Post condition
-    pandseq = Sequence('PostCondAnd')
-    pandseq.add_children([ext, fire])
-    pand = And(pandseq)
-
-    # Actions
-    aandseq = Sequence('ActionAnd')
-    aandseq.add_children([extact, fireact])
-    aand = And(aandseq)
-
-    # Until
-    # Trap global constraint
-    fire1 = PropConditionNode('f')
-    negfire = Negation(fire1, 'NegFire')
-
-    parll2 = Sequence('UntilAnd')
-    untila = UntilA(negfire)
-    untilb = UntilB(aand)
-    parll2.add_children([untilb, untila])
-    anddec2 = And(parll2)
-    until = Until(anddec2)
-    next = Next(until)
-    # next = Finally(until)
-    parll1 = Sequence('TrueNext')
-    # Trap global constraint
-    altrue = AlwaysTrueNode('True')
-    parll1.add_children([altrue, next])
-    anddec1 = And(parll1)
-    # Root node
-    main.add_children([pand, anddec1])
-
-    genseq.add_children([main])
-    gensel.add_children([recbt.root, genseq])
     # gensel.add_children([genseq])
     bt = BehaviourTree(gensel)
     print(py_trees.display.ascii_tree(bt.root))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
-    return (
-        bt, next, fire, fire1, ext, extact, fireact
-    )
 
 
 def main():

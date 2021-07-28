@@ -887,11 +887,11 @@ class GridMDPCheeseBeans(MDP):
         self.curr_loc = self.startloc
 
         if len(terminals) >= 2:
-            self.ext = terminals[0]
-            self.fire = terminals[1]
+            self.cheese = terminals[0]
+            self.beans = terminals[1]
         else:
-            self.ext = None
-            self.fire = None
+            self.cheese = None
+            self.beans = None
 
         for s in states:
             transitions[s] = {}
@@ -971,7 +971,7 @@ class GridMDPCheeseBeans(MDP):
         else:
             return self.reward[state]
 
-    def calculate_T(self, state, action, fp=0.8, lp=0.1, rp=0.1, bp=0.0):
+    def calculate_T(self, state, action, fp=0.95, lp=0.025, rp=0.025, bp=0.0):
         if action:
             return [(fp, self.go(state, action)),
                     (rp, self.go(state, turn_right(action))),

@@ -193,7 +193,7 @@ def advance_exp():
     #     print(bboard.trace, mdp.curr_loc)
 
     genbt = create_gen_bt(recbt[0], mdp)
-    for i in range(6):
+    for i in range(8):
         # print(py_trees.display.ascii_tree(genbt[0].root))
         recbt[0].root.children[0].children[1].reset()
         # genbt[0].root.children[0].children[0].children[1].reset()
