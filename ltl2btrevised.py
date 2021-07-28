@@ -270,12 +270,13 @@ class And(Decorator):
         self.trace = trace
         # Find all the child nodes and call setup
         childs = self.decorated.children
-        # print('from And decorator setup', i)
+        # print('from And decorator setup', i, childs)
         for child in childs:
             try:
                 child.setup(0, trace, i)
             except TypeError:
-                pass
+                for c in child.children:
+                    c.setup(0, trace, i)
 
     def update(self):
         """
@@ -496,7 +497,7 @@ class Until(Decorator):
             return common.Status.SUCCESS
         else:
             for i in range(self.idx+1, len(self.trace)):
-                # print('inside Until', self.name, i)
+                # print('inside Until', self.name, i, self.decorated.name)
                 self.decorated.setup(0, self.trace, i)
                 return_value = list(self.decorated.tick())[-1].update()
                 if return_value == common.Status.SUCCESS:
@@ -603,8 +604,14 @@ class UntilA(Decorator):
         elif (j > self.parent.parent.parent.idx and self.parent.children[0].status == common.Status.SUCCESS):
             # print(self.parent.parent.parent)
             for k in range(self.parent.parent.parent.idx, j):
-                self.decorated.reset(k)
-                self.decorated.setup(0, self.trace, k)
+                try:
+                    self.decorated.reset(k)
+                    self.decorated.setup(0, self.trace, k)
+                except AttributeError:
+                    # [c.reset(k) for c in self.decorated.children]
+                    # [c.setup(0, self.trace[:j], k) for c in self.decorated.children]
+                    pass
+                    # self.decorated.setup(0, self.trace, k)
                 return_value = list(self.decorated.tick())[-1].update()
                 if return_value == common.Status.FAILURE:
                     break

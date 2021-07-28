@@ -190,6 +190,7 @@ def advance_exp():
     goalspec_cheese = '(G(!ct) & c) | (G(!ct) & (X (G(!ct) U (G(!ct) & c))))'
     goalspec_beans = '(G(!bt) & b) | (G(!bt) & (X (G(!bt) U (G(!bt) & b))))'
     goalspec_home = '((c | b) & h) | (true & (X ((F(G(!ct) & c) | F(G(!bt) & b)) U ((c|b) & h))))'
+    goalspec_until = '((F(G(!ct) & c) | F(G(!bt) & b)) U ((c|b) & h))'
     # goalspec_home = '(G(!bt & !ct) & (c|b) & h) | (G(!bt & !ct) & (X (G(!bt & !ct) U (G(!bt & !ct) & (c|b) & h))))'
     # goalspec = '('+ goalspec_cheese + ') & X (' + goalspec_home +')'
     goalspec = '(('+ goalspec_cheese + ') | (' + goalspec_beans +')) & X (' + goalspec_home +')'
@@ -198,12 +199,12 @@ def advance_exp():
     bboard.trace = []
     bboard.trace.append(mdp.generate_default_props())
     trace = [
-        {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
-        {'c': False, 'b': False, 'h':False,'ct': False, 'bt':False},
-        {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
+        # {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
+        # {'c': False, 'b': False, 'h':False,'ct': False, 'bt':False},
+        # {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
         {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
         {'c': False, 'b': True, 'h':False, 'ct': False, 'bt':False},
-        {'c': False, 'b': False , 'h':False, 'ct': False, 'bt':False},
+        {'c': False, 'b': True , 'h':True, 'ct': False, 'bt':False},
         ]
     bboard.trace = trace
     # recbt = create_rec_bt()
@@ -212,8 +213,8 @@ def advance_exp():
     recbt = home_bt()
     for i in range(1):
         # print(py_trees.display.ascii_tree(genbt[0].root))
-        [node.reset() for node in recbt[0].root.children]
-        recbt[0].root.children[1].reset()
+        # [node.reset() for node in recbt[0].root.children]
+        # recbt[0].root.children[1].reset()
         # genbt[0].root.children[0].children[0].children[1].reset()
         setup_node(recbt[1:], bboard.trace, k=0)
         recbt[0].tick()
@@ -232,10 +233,10 @@ def advance_exp():
     #     #     [(a.name, a.status) for a in genbt[3:]])
 
     parser = LTLfParser()
-    formula = parser(goalspec_beans)
+    formula = parser(goalspec_until)
     # print(formula.truth(bboard.trace), formula)
     # print('GEN', formula.truth(bboard.trace), genbt[0].root.status)
-    print('REC', formula.truth(bboard.trace), recbt[0].root.status)
+    print('REC', formula, formula.truth(bboard.trace), recbt[0].root.status)
 
 
 def cheese_bt(rec=True, env=None, qtable=None):
@@ -345,7 +346,7 @@ def beans_bt(rec=True, env=None, qtable=None):
 def home_bt(rec=True, env=None, qtable=None):
     # goalspec_home = '((c | b) & h) | (true & (X ((F(G(!ct) & c) | F(G(!bt) & b)) U ((c|b) & h))))'
     main = Selector('RHMain')
-    home = PropConditionNode('h')
+    home = [PropConditionNode('h') for i in range(2)]
     cheese = [PropConditionNode('c') for i in range(3)]
     beans  = [PropConditionNode('b') for i in range(3)]
 
@@ -353,7 +354,7 @@ def home_bt(rec=True, env=None, qtable=None):
     pandseq = Sequence('PostCondAnd')
     pandsel = Selector('PostCondOr')
     pandsel.add_children([cheese[0], beans[0]])
-    pandseq.add_children([pandsel, home])
+    pandseq.add_children([pandsel, home[0]])
     pand = And(pandseq)
 
     if not rec:
@@ -377,15 +378,20 @@ def home_bt(rec=True, env=None, qtable=None):
     taskcc = Sequence('TaskCnstrC')
     taskcc.add_children([gctrap1, cheese[2]])
     fincc = Finally(And(taskcc))
-    taskcnstr = Selector('TaskCnstr')
-    taskcnstr.add_children([fincb, fincc])
+    # taskcnstr = Selector('TaskCnstr')
+    # taskcnstr.add_children([fincb, fincc])
 
     parll2 = Sequence('UntilAndB')
-    untila = UntilA(taskcnstr)
+    untila = UntilA(fincb)
     if not rec:
         untilb = UntilB(panda)
     else:
-        untilb = UntilB(copy.copy(pand))
+        upandseq = Sequence('PostCondAndU')
+        upandsel = Selector('PostCondOrU')
+        upandsel.add_children([cheese[1], beans[1]])
+        upandseq.add_children([upandsel, home[1]])
+        upand = And(upandseq)
+        untilb = UntilB(upand)
     parll2.add_children([untilb, untila])
     anddec2 = And(parll2)
     until = Until(anddec2)
@@ -399,7 +405,8 @@ def home_bt(rec=True, env=None, qtable=None):
     main.add_children([pand, anddec1])
     bt = BehaviourTree(main)
     print(py_trees.display.ascii_tree(bt.root))
-    return (bt, *cheese, *beans, home, next)
+    # py_trees.logging.level = py_trees.logging.Level.DEBUG
+    return (bt, *cheese, *beans, *home, next, fincb, fincc)
 
 
 def get_qtable_ext(mdp):
