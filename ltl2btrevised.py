@@ -1,3 +1,4 @@
+from typing import Type
 from flloat.parser.ltlf import LTLfParser
 
 from py_trees.composites import Sequence, Selector, Parallel
@@ -271,7 +272,10 @@ class And(Decorator):
         childs = self.decorated.children
         # print('from And decorator setup', i)
         for child in childs:
-            child.setup(0, trace, i)
+            try:
+                child.setup(0, trace, i)
+            except TypeError:
+                pass
 
     def update(self):
         """
