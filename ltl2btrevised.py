@@ -271,12 +271,22 @@ class And(Decorator):
         # Find all the child nodes and call setup
         childs = self.decorated.children
         # print('from And decorator setup', i, childs)
-        for child in childs:
+
+        def setupreq(child, trace, i):
             try:
+                # print('setupreq', child)
                 child.setup(0, trace, i)
-            except TypeError:
+            except:
                 for c in child.children:
-                    c.setup(0, trace, i)
+                    setupreq(c, trace, i)
+        for c1 in childs:
+            setupreq(c1, trace, i)
+        # for child in childs:
+        #     try:
+        #         child.setup(0, trace, i)
+        #     except TypeError:
+        #         for c in child.children:
+        #             c.setup(0, trace, i)
 
     def update(self):
         """
@@ -342,7 +352,8 @@ class Next(Decorator):
         elif self.decorated.status == common.Status.FAILURE:
             self.next_status = common.Status.FAILURE
 
-        return self.next_status
+        # return self.next_status
+        return self.decorated.status
 
 
 # Just a simple decorator node that implements Globally LTLf operator
@@ -607,12 +618,13 @@ class UntilA(Decorator):
                 try:
                     self.decorated.reset(k)
                     self.decorated.setup(0, self.trace, k)
+                    return_value = list(self.decorated.tick())[-1].update()
                 except AttributeError:
-                    # [c.reset(k) for c in self.decorated.children]
-                    # [c.setup(0, self.trace[:j], k) for c in self.decorated.children]
-                    pass
-                    # self.decorated.setup(0, self.trace, k)
-                return_value = list(self.decorated.tick())[-1].update()
+                    [c.reset(k) for c in self.decorated.children]
+                    [c.setup(0, self.trace, k) for c in self.decorated.children]
+                    # print(self.decorated, self.decorated.status)
+                    # print(list(self.decorated.tick())[-1])
+                    return_value = list(self.decorated.tick())[-1].status
                 if return_value == common.Status.FAILURE:
                     break
         else:
