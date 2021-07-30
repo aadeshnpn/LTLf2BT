@@ -127,30 +127,31 @@ class ActionNode(Behaviour):
         """
         state = self.env.curr_loc
         action = dictmax(self.qtable[state], s='key')
-        # print('action', action)
+        # print('action', state, action)
         # p, s1 = zip(*self.env.T(state, action))
         # p, s1 = list(p), list(s1)
         # s1 = s1[np.argmax(p)]
         s1, reward, done, _ = self.env.step(action)
         self.blackboard.trace.append(self.env.generate_props_loc(s1))
-        print('State', s1, self.name, len(self.blackboard.trace), self.step)
+
         self.env.curr_loc = s1
         self.step += 1
+        return_status = None
         # if self.blackboard.trace[-1][self.action_symbol]:
         # if self.env.state_map[self.action_symbol] == 's'+str(s1[0])+str(s1[1]):
         # print(self.step, self.action_symbol, self.blackboard.trace[-1])
-        if self.step >=6:
-            exit()
         if self.blackboard.trace[-1][self.action_symbol]:
             # self.blackboard.trace.append(self.env.generate_props_loc(s1))
-            return common.Status.SUCCESS
+            # print(self.name, 'resutn success')
+            return_status = common.Status.SUCCESS
         # elif 's'+str(s1[0])+str(s1[1]) == 's32':
         elif self.step >=6:            # self.blackboard.trace.append(self.env.generate_props_loc(s1))
-            return common.Status.FAILURE
+            return_status = common.Status.FAILURE
         else:
-            return common.Status.RUNNING
+            return_status = common.Status.RUNNING
 
-
+        # print('State', s1, self.name, len(self.blackboard.trace), self.step, return_status)
+        return return_status
         # return common.Status.RUNNING
 
 
@@ -191,7 +192,7 @@ def setup_node(nodes, trace, k):
 
 
 def advance_exp():
-    mdp = init_mdp_seq((0, 2))
+    mdp = init_mdp_seq((1, 3))
     # ctable = get_qtable_cheese(mdp)
     # btable = get_qtable_beans(mdp)
     # htable = get_qtable_home(mdp)
@@ -234,39 +235,39 @@ def advance_exp():
         {'c': True, 'b': False, 'h':True, 'ct': False, 'bt':False},
         {'c': True, 'b': False , 'h':True, 'ct': False, 'bt':False},
         ]
-    bboard.trace = trace
-    # recbt = create_rec_bt()
-    # recbt = cheese_bt()
-    recbt = home_bt()
-    for i in range(1):
-        # print(py_trees.display.ascii_tree(recbt[0].root))
-        # [node.reset() for node in recbt[0].root.children]
-        # recbt[0].root.children[1].reset()
-        # genbt[0].root.children[0].children[0].children[1].reset(
-        setup_node(recbt[1:], bboard.trace, k=0)
-        recbt[0].tick()
-        # print('Tick', i, bboard.trace[-1])
+    # bboard.trace = trace
+    recbt = create_rec_bt()
+    # # # recbt = cheese_bt()
+    # # recbt = home_bt()
+    # for i in range(1):
+    #     # print(py_trees.display.ascii_tree(recbt[0].root))
+    #     # [node.reset() for node in recbt[0].root.children]
+    #     # recbt[0].root.children[1].reset()
+    #     # genbt[0].root.children[0].children[0].children[1].reset(
+    #     setup_node(recbt[1:], bboard.trace, k=0)
+    #     recbt[0].tick()
+    #     # print('Tick', i, bboard.trace[-1])
 
-    # genbt = create_gen_bt(recbt[0], mdp)
+    genbt = create_gen_bt(recbt[0], mdp)
 
-    # for i in range(4):
-    #     # print(py_trees.display.ascii_tree(genbt[0].root))
-    #     # recbt[0].root.children[0].children[1].reset()
-    #     # print(recbt[0].root.children[0].children[0].children[0].children)
-    #     # [node.reset() for node in recbt[0].root.children[0].children[0].children[0].children]
-    #     # [node.reset() for node in recbt[0].root.children[0].children[1].children[0].children]
-    #     # genbt[0].root.children[0].children[0].children[1].reset()
-    #     setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
-    #     genbt[0].tick()
-    #     print('Tick',i, bboard.trace[-1], mdp.curr_loc)
-    #     # print(
-    #     #     i, genbt[0].root.status, bboard.trace,
-    #     #     [(a.name, a.status) for a in genbt[3:]])
+    for i in range(7):
+        # print(py_trees.display.ascii_tree(genbt[0].root))
+        recbt[0].root.children[0].children[1].reset()
+        # print(recbt[0].root.children[0].children[0].children[0].children)
+        [node.reset() for node in recbt[0].root.children[0].children[0].children[0].children]
+        [node.reset() for node in recbt[0].root.children[0].children[1].children[0].children]
+        # genbt[0].root.children[0].children[0].children[1].reset()
+        setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
+        genbt[0].tick()
+        print('Tick',i, bboard.trace[-1], mdp.curr_loc)
+        # print(
+        #     i, genbt[0].root.status, bboard.trace,
+        #     [(a.name, a.status) for a in genbt[3:]])
 
     parser = LTLfParser()
-    formula = parser(goalspec_home)
-    # print(formula.truth(bboard.trace), formula)
-    # print('GEN', formula.truth(bboard.trace), genbt[0].root.status)
+    formula = parser(goalspec)
+    print(formula.truth(bboard.trace), formula)
+    print('GEN', formula.truth(bboard.trace), genbt[0].root.status)
     print('REC', formula, formula.truth(bboard.trace), recbt[0].root.status)
 
 
@@ -288,7 +289,7 @@ def cheese_bt(rec=True, env=None, qtable=None):
         ctrapa = PropConditionNode('ct')
         negctrapa = Negation(ctrapa, 'NegCTrap')
         gctrapa = Globally(negctrapa, 'GCTrap')
-        pandseqa = Sequence('PostCondActionC', memory=False)
+        pandseqa = Sequence('PostCondActionC')
         pandseqa.add_children([gctrapa, cheeseact])
         panda = And(pandseqa)
     # Until
@@ -340,7 +341,7 @@ def beans_bt(rec=True, env=None, qtable=None):
         btrapa = PropConditionNode('bt')
         negbtrapa = Negation(btrapa, 'NegBTrap')
         gbtrapa = Globally(negbtrapa, 'GBTrap')
-        pandseqa = Sequence('PostCondActionB', memory=False)
+        pandseqa = Sequence('PostCondActionB')
         pandseqa.add_children([gbtrapa, beansact])
         panda = And(pandseqa)
     # Until
@@ -390,8 +391,8 @@ def home_bt(rec=True, env=None, qtable=None):
 
     if not rec:
         beansact = ActionNode('h', env, qtable)
-        pandseqa = Sequence('PostCondActionB', memory=False)
-        pandsela = Selector('PostCondActionOrB', memory=False)
+        pandseqa = Sequence('PostCondActionB')
+        pandsela = Selector('PostCondActionOrB')
         pandsela.add_children([cheese[1], beans[1]])
         pandseqa.add_children([pandsela, beansact])
         panda = And(pandseqa)
@@ -400,16 +401,16 @@ def home_bt(rec=True, env=None, qtable=None):
     btrap1 = PropConditionNode('bt')
     negbtrap1 = Negation(btrap1, 'NegBTrap1')
     gbtrap1 = Globally(negbtrap1, 'GTBrap1')
-    taskcb = Sequence('TaskCnstrB', memory=False)
+    taskcb = Sequence('TaskCnstrB')
     taskcb.add_children([gbtrap1, beans[2]])
     fincb = Finally(And(taskcb))
     ctrap1 = PropConditionNode('ct')
     negctrap1 = Negation(ctrap1, 'NegCTrap1')
     gctrap1 = Globally(negctrap1, 'GTCrap1')
-    taskcc = Sequence('TaskCnstrC', memory=False)
+    taskcc = Sequence('TaskCnstrC')
     taskcc.add_children([gctrap1, cheese[2]])
     fincc = Finally(And(taskcc))
-    taskcnstr = Selector('TaskCnstr', memory=False)
+    taskcnstr = Selector('TaskCnstr')
     taskcnstr.add_children([fincb, fincc])
 
     parll2 = Sequence('UntilAndB')
@@ -426,20 +427,18 @@ def home_bt(rec=True, env=None, qtable=None):
     parll2.add_children([untilb, untila])
     anddec2 = And(parll2)
     until = Until(anddec2)
-    next = Next(until)
-    # next = Finally(until)
+    # next = Next(until)
+    next = Finally(until)
     parll1 = Sequence('TrueNextB')
     atrue = AlwaysTrueNode('ATrue')
     parll1.add_children([atrue, next])
     anddec1 = And(parll1)
     # Root node
     main.add_children([pand, anddec1])
-    # bt = BehaviourTree(main)
-    bt = BehaviourTree(until)
-    print(py_trees.display.ascii_tree(bt.root))
+    bt = BehaviourTree(main)
+    # print(py_trees.display.ascii_tree(bt.root))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
-    return [bt, *cheese, *beans, *home, until]
-    # return [bt, *cheese, *beans, *home, next]
+    return [bt, *cheese, *beans, *home, next]
 
 
 def create_rec_bt():
@@ -454,7 +453,7 @@ def create_rec_bt():
     food_home_seq.add_children([cbselector, homenext])
     food_home = And(food_home_seq)
     bt = BehaviourTree(food_home)
-    print(py_trees.display.ascii_tree(bt.root))
+    # print(py_trees.display.ascii_tree(bt.root))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
     return [bt] + cheeserecbt[1:] + beansrecbt[1:] + homerecbt[1:]
 
@@ -475,8 +474,8 @@ def create_gen_bt(recbt, mdp):
     food_home_gen = And(food_home_gen_seq)
 
     main = Selector('MainGen')
-    # main.add_children([recbt.root, food_home_gen])
-    main.add_children([food_home_gen])
+    main.add_children([recbt.root, food_home_gen])
+    # main.add_children([food_home_gen])
     bt = BehaviourTree(main)
     # print(py_trees.display.ascii_tree(bt.root))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG

@@ -919,7 +919,8 @@ class GridMDPCheeseBeans(MDP):
         self.state_dict = dict()
         self.curr_reward = self.reward[self.startloc]
         self.state_keyslist = ['s'+str(i)+str(j) for i in range(self.rows) for j in range(self.cols)]
-        home = 's'+ str(self.startloc[0]) + str(self.startloc[1])
+        # home = 's'+ str(self.startloc[0]) + str(self.startloc[1])
+        home = 's02'
         self.state_map = {'c': 's33', 'b': 's30', 'h': home, 'ct':'s23', 'bt':'s20'}
         self.default_props = dict(zip(self.state_keyslist, [False] * len(self.state_keyslist)))
         self.carrying_cheese = False

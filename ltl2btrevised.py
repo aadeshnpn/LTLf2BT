@@ -618,7 +618,7 @@ class UntilA(Decorator):
                 try:
                     self.decorated.reset(k)
                     self.decorated.setup(0, self.trace, k)
-                    return_value = list(self.decorated.tick())[-1].update()
+                    return_value = list(self.decorated.tick())[-1].status
                 except AttributeError:
                     [c.reset(k) for c in self.decorated.children]
                     [c.setup(0, self.trace, k) for c in self.decorated.children]
