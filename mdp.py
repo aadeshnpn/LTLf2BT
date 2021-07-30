@@ -929,14 +929,22 @@ class GridMDPCheeseBeans(MDP):
         if not self.carrying_cheese and props[self.state_map['c']]:
             self.carrying_cheese = True
             props[self.state_map['c']] = True
-
+        elif self.carrying_cheese:
+            props[self.state_map['c']] = True
         if not self.carrying_beans and props[self.state_map['b']]:
             self.carrying_beans = True
             props[self.state_map['b']] = True
-        if self.reward[(0,2)] ==-2 and self.curr_loc==(0,2):
+        elif self.carrying_beans:
+            props[self.state_map['b']] = True
+
+        if self.reward[(2,3)] ==-2 and self.curr_loc==(2,3):
             props[self.state_map['ct']] = True
-        if self.reward[(3,2)] ==-2 and self.curr_loc==(3,2):
+        else:
+            props[self.state_map['ct']] = False
+        if self.reward[(2,0)] ==-2 and self.curr_loc==(2,0):
             props[self.state_map['bt']] = True
+        else:
+            props[self.state_map['bt']] = False
         return props
 
     def generate_default_props(self):

@@ -132,8 +132,8 @@ class ActionNode(Behaviour):
         # p, s1 = list(p), list(s1)
         # s1 = s1[np.argmax(p)]
         s1, reward, done, _ = self.env.step(action)
-        # print('State', s1)
         self.blackboard.trace.append(self.env.generate_props_loc(s1))
+        print('State', s1, self.name, len(self.blackboard.trace))
         self.env.curr_loc = s1
         self.step += 1
         # if self.blackboard.trace[-1][self.action_symbol]:
@@ -224,14 +224,15 @@ def advance_exp():
     bboard.trace.append(mdp.generate_default_props())
     trace = [
         # {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
-        # {'c': False, 'b': False, 'h':False,'ct': False, 'bt':False},
-        # {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
+        {'c': False, 'b': False, 'h':False,'ct': False, 'bt':False},
         {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
-        {'c': False, 'b': True, 'h':False, 'ct': False, 'bt':False},
-        {'c': False, 'b': True , 'h':True, 'ct': False, 'bt':False},
+        {'c': False, 'b': False, 'h':False, 'ct': False, 'bt':False},
+        {'c': True, 'b': False, 'h':False, 'ct': False, 'bt':False},
+        {'c': True, 'b': False , 'h':False, 'ct': False, 'bt':False},
         ]
-    # bboard.trace = trace
+    bboard.trace = trace
     recbt = create_rec_bt()
+    # recbt = cheese_bt()
     # for i in range(1):
     #     # print(py_trees.display.ascii_tree(genbt[0].root))
     #     # [node.reset() for node in recbt[0].root.children]
@@ -242,9 +243,11 @@ def advance_exp():
     #     print(bboard.trace, mdp.curr_loc, recbt[0].root.status)
 
     genbt = create_gen_bt(recbt[0], mdp)
-    for i in range(8):
+    for i in range(4):
         # print(py_trees.display.ascii_tree(genbt[0].root))
-        # [node.reset() for node in recbt[0].root.children]
+        recbt[0].root.children[1].reset()
+        [node.reset() for node in recbt[0].root.children[0].children[0].children]
+        [node.reset() for node in recbt[0].root.children[0].children[1].children]
         # genbt[0].root.children[0].children[0].children[1].reset()
         setup_node(recbt[1:] + genbt[1:], bboard.trace, k=0)
         genbt[0].tick()
@@ -254,7 +257,7 @@ def advance_exp():
         #     [(a.name, a.status) for a in genbt[3:]])
 
     parser = LTLfParser()
-    formula = parser(goalspec_home)
+    formula = parser(goalspec)
     print(formula.truth(bboard.trace), formula)
     print('GEN', formula.truth(bboard.trace), genbt[0].root.status)
     print('REC', formula, formula.truth(bboard.trace), recbt[0].root.status)
