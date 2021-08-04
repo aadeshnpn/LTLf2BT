@@ -446,7 +446,7 @@ def create_gen_bt(recbt, mdp):
     # gensel.add_children([genseq])
     bt = BehaviourTree(gensel)
     print(py_trees.display.ascii_tree(bt.root))
-    py_trees.logging.level = py_trees.logging.Level.DEBUG
+    # py_trees.logging.level = py_trees.logging.Level.DEBUG
     return (
         bt, next, cheese, cheeseh, cheeseha, home, gtrap,
         gtrap1, gtrap2, gtrap1h, gtrap2h, gtraph, gtrapha,
