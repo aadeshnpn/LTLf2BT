@@ -75,7 +75,7 @@ class PropConditionNode(Behaviour):
         return return_value
 
 
-# Just a simple condition node that implements atomic propositions
+# Just a simple decorator node that implements Negation
 class Negation(Decorator):
     """Decorator node for the negation of an atomic proposition.
 
@@ -122,7 +122,7 @@ class Negation(Decorator):
             return common.Status.FAILURE
 
 
-# Just a simple condition node that implements atomic propositions
+# Just a simple decorator node that implements And LTLf operator
 class And(Decorator):
     """Decorator node for the and of an atomic proposition.
 
@@ -189,7 +189,74 @@ class And(Decorator):
         return self.decorated.status
 
 
-# Just a simple condition node that implements Next LTLf operator
+# Just a simple decorator node that implements Or LTLf operator
+class Or(Decorator):
+    """Decorator node for the Or of an atomic proposition.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the negation of an atomic LTLf propositions.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Or, self).__init__(name=name, child=child)
+
+    def reset(self, i=0):
+        def reset(children, i):
+            for child in children:
+                try:
+                    child.reset(i)
+                except AttributeError:
+                    reset(child.children, i)
+        reset(self.children, i)
+
+    def increment(self):
+        for child in self.children:
+            child.increment()
+
+    def setup(self, timeout, trace, i=0):
+        self.idx = i
+        self.trace = trace
+        # Find all the child nodes and call setup
+        childs = self.decorated.children
+        # print('from And decorator setup', i, childs)
+
+        def setupreq(child, trace, i):
+            try:
+                # print('setupreq', child)
+                child.setup(0, trace, i)
+            except:
+                for c in child.children:
+                    setupreq(c, trace, i)
+        for c1 in childs:
+            setupreq(c1, trace, i)
+        # for child in childs:
+        #     try:
+        #         child.setup(0, trace, i)
+        #     except TypeError:
+        #         for c in child.children:
+        #             c.setup(0, trace, i)
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the inverted status
+        """
+        # if the proposition value is true
+        ## return Failure
+        # else
+        ## return Success
+        # This give access to the child class of decorator class
+        # print(self.parent, self.children[0].children, self.name, self.idx, self.decorated.status)
+        return self.decorated.status
+
+
+# Just a simple decorator node that implements Next LTLf operator
 class Next(Decorator):
     """Decorator node for the Next operator.
 
@@ -581,7 +648,8 @@ def parse_ltlf(formula):
                 leftnode = parse_ltlf(leftformual)
                 rightnode = parse_ltlf(rightformula)
                 ornode.add_children([leftnode, rightnode])
-                return ornode
+                ordecorator = Or(ornode)
+                return ordecorator
 
             elif isinstance(formula, LTLfUntil):
                 leftformual, rightformula = formula.formulas

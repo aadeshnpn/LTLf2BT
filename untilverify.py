@@ -1,5 +1,6 @@
 from flloat.parser.ltlf import LTLfParser
-
+from gbtalgo import create_recognizer
+from ltl2btrevised import expriments
 
 
 def testing():
@@ -34,8 +35,9 @@ def ppatasks():
     ppa1 = '(!t & s) | ( (!t & !c) & X((!t) U (!t & s)))'
     ppa2 = '(!t & c) | ( (!t & s) & X((!t) U (!t & c)))'
     formula_string = '('+ ppa1 + ') U (' + ppa2 + ')'
-    formula = parser(formula_string)        # returns a LTLfFormula
-    print(formula)
+    # formula = parser(ppa1)        # returns a LTLfFormula
+    # print(formula)
+    ppabt = create_recognizer(formula_string)
 
     t1 = [
         {'t': False, 's': False, 'c': False},
@@ -48,7 +50,14 @@ def ppatasks():
         {'t': False, 's': True, 'c': True},
         ]
 
-    print(formula.truth(t1))
+    # print(formula.truth(t1))
+    class args:
+        def __init__(self):
+            self.trace ='fixed'
+    args.trace = 'fixed'
+
+    expriments([t1], ppabt, [ppabt], formula_string, args)
+
 
 def main():
 
