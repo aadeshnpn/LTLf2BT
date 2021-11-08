@@ -1,4 +1,5 @@
 """Algorithm to create GBT given a goal specification."""
+from untilverify import ppatasks
 from flloat.ltlf import LTLfAlways, LTLfAnd, LTLfEventually, LTLfNext, LTLfNot, LTLfOr, LTLfUntil
 from flloat.parser.ltlf import LTLfParser, LTLfAtomic
 
@@ -16,18 +17,21 @@ from ltl2btrevised import PropConditionNode, Negation, And, Next, Globally, Fina
 
 
 def create_recognizer(formula):
-    # print(dir(formula), type(formula))
-    # # print('s', formula.s)
-    # # print('f', formula.f, type(formula.f))
-    # print('base expression', formula.base_expression)
-    # print('formulas', formula.formulas, type(formula.formulas))
-    # print('delta', formula.delta)
-    # print('operator', formula.operator_symbol)
-    # # print('automaton', formula.to_automaton())
-    # # print('ldlf', formula.to_ldlf())
-    # print('str', formula.__str__)
     bt = BehaviourTree(parse_ltlf(formula))
     print(py_trees.display.ascii_tree(bt.root))
+    return bt
+
+
+def create_ppatask(postcond, precond, taskcnstr, gcnstr):
+    # PostCond | (PreCond & X (TaskBulk U PostCond))
+    postbulk = gcnstr + ' & '+  postcond
+    prebulk = gcnstr + ' & '+  precond
+    taskbulk = gcnstr + ' & '+  taskcnstr
+    ppatask = '('+ postbulk + ') | ((' + prebulk + ') & X((' + taskbulk + ') U (' +postbulk + '))' +  ')'
+    print(ppatask)
+    parser = LTLfParser()
+    ppaformula = parser(ppatask)
+    create_recognizer(ppaformula)
 
 
 def create_generator():
@@ -84,11 +88,24 @@ def parse_ltlf(formula):
 
 
 def main():
-    formula_string = " (F(a) & ((F(b) U c)))"
-    formula_string = " (c U a)"
-    parser = LTLfParser()
-    formula = parser(formula_string)
-    create_recognizer(formula)
+    # formulas = [
+    #     '(a)', '(!a)', 'F(a)', 'G(a)', 'X(a)',
+    #     '(a | b)', '(a & b)', '(a U b)']
+    # for formula_string in formulas:
+    #     parser = LTLfParser()
+    #     formula = parser(formula_string)
+    #     create_recognizer(formula)
+    # ppa1 = '(!t & s) | ( (!t & !c) & X((!t) U (!t & s)))'
+    # ppa2 = '(!t & c) | ( (!t & s) & X((!t & o) U (!t & c)))'
+    # ppa = '('+ ppa1 + ') U (' + ppa2 + ')'
+    # complexformulas = [ppa1, ppa2, ppa]
+
+    # for formula_string in complexformulas:
+    #     parser = LTLfParser()
+    #     formula = parser(formula_string)
+    #     create_recognizer(formula)
+
+    create_ppatask('c', 's', 'o', '!t')
 
 
 main()
