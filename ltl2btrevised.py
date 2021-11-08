@@ -282,36 +282,40 @@ def composite1_next_and(args, verbos=True):
         traces =[trace1, trace2]
     else:
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
-    cnode1 = PropConditionNode('c')
-    cnode2 = PropConditionNode('d')
-    parll = Parallel('And')
-    parll.add_children([cnode1, cnode2])
-    anddec = And(parll)
-    nextd = Next(anddec)
-    expriments(traces, nextd, [nextd], '(X (c & d))', args)
+    # cnode1 = PropConditionNode('c')
+    # cnode2 = PropConditionNode('d')
+    # parll = Parallel('And')
+    # parll.add_children([cnode1, cnode2])
+    # anddec = And(parll)
+    # nextd = Next(anddec)
+    goalspec = '(X (c & d))'
+    nextd = create_recognizer(goalspec)
+    expriments(traces, nextd, [nextd], goalspec, args)
 
 
 # Experiment 6 for simple X and &
 def composite2_next_and(args, verbos=True):
     traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
-    cnode1 = PropConditionNode('c')
-    nextd = Next(cnode1)
-    cnode2 = PropConditionNode('d')
-    parll = Parallel('And')
-    parll.add_children([nextd, cnode2])
-    anddec = And(parll)
-
-    expriments(traces, anddec, [nextd, anddec], '((X c) & d)', args)
+    # cnode1 = PropConditionNode('c')
+    # nextd = Next(cnode1)
+    # cnode2 = PropConditionNode('d')
+    # parll = Parallel('And')
+    # parll.add_children([nextd, cnode2])
+    # anddec = And(parll)
+    goalspec = '((X c) & d)'
+    anddec = create_recognizer(goalspec)
+    expriments(traces, anddec, [anddec], goalspec, args)
 
 
 # Experiment 7 for composite X
 def composite3_next_next(args, verbos=True):
     traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
-    cnode1 = PropConditionNode('c')
-    nextd1 = Next(cnode1)
-    nextd2 = Next(nextd1)
-
-    expriments(traces, nextd2, [nextd2], '(X (X c))', args)
+    # cnode1 = PropConditionNode('c')
+    # nextd1 = Next(cnode1)
+    # nextd2 = Next(nextd1)
+    goalspec = '(X (X c))'
+    nextd2 = create_recognizer(goalspec)
+    expriments(traces, nextd2, [nextd2], goalspec, args)
 
 
 # Experiment 8 for composite X and and
@@ -333,25 +337,27 @@ def composite4_next_and(args, verbos=True):
         traces =[trace1, trace2]
     else:
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
-    cnode1 = PropConditionNode('a')
-    cnode2 = PropConditionNode('b')
-    cnode3 = PropConditionNode('c')
-    cnode4 = PropConditionNode('d')
+    # cnode1 = PropConditionNode('a')
+    # cnode2 = PropConditionNode('b')
+    # cnode3 = PropConditionNode('c')
+    # cnode4 = PropConditionNode('d')
 
-    nextc = Next(cnode3)
-    nextb = Next(cnode2)
-    parll1 = Parallel('And1')
-    parll1.add_children([nextc, cnode4])
-    and1 = And(parll1)
-    parll2 = Parallel('And2')
-    parll2.add_children([cnode1, nextb])
-    and2 = And(parll2)
-    mainand = Parallel('And3')
-    mainand.add_children([and1, and2])
-    andmain = And(mainand)
-    finalnext = Next(andmain)
+    # nextc = Next(cnode3)
+    # nextb = Next(cnode2)
+    # parll1 = Parallel('And1')
+    # parll1.add_children([nextc, cnode4])
+    # and1 = And(parll1)
+    # parll2 = Parallel('And2')
+    # parll2.add_children([cnode1, nextb])
+    # and2 = And(parll2)
+    # mainand = Parallel('And3')
+    # mainand.add_children([and1, and2])
+    # andmain = And(mainand)
+    # finalnext = Next(andmain)
+    goalspec = 'X (((X c) & d) & (a & (X b)))'
+    finalnext = create_recognizer(goalspec)
 
-    expriments(traces, finalnext, [nextc, nextb, finalnext], 'X (((X c) & d) & (a & (X b)))', args)
+    expriments(traces, finalnext, [finalnext], goalspec, args)
 
 
 # Experiment 9 for simple globally operator
@@ -412,10 +418,12 @@ def globally2decorator(args, verbos=True):
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
 
     # Experiment variables
-    cnode = PropConditionNode('a')
-    # ndecorator = Negation(cnode, 'Invert')
-    gdecorator = Globally(cnode, 'Globally')
-    expriments(traces, gdecorator, [gdecorator], 'G a', args)
+    # cnode = PropConditionNode('a')
+    # # ndecorator = Negation(cnode, 'Invert')
+    # gdecorator = Globally(cnode, 'Globally')
+    goalspec = 'G a'
+    gdecorator = create_recognizer(goalspec)
+    expriments(traces, gdecorator, [gdecorator], goalspec, args)
 
 
 # Experiment 10 for simple globally operator
@@ -449,13 +457,15 @@ def composite1_globally_and(args, verbos=True):
         traces =[trace1, trace2, trace3, trace4]
     else:
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
-    cnode1 = PropConditionNode('c')
-    cnode2 = PropConditionNode('d')
-    parll = Parallel('And')
-    parll.add_children([cnode1, cnode2])
-    anddec = And(parll)
-    globallyd = Globally(anddec)
-    expriments(traces, globallyd, [globallyd], '(G (c & d))', args)
+    # cnode1 = PropConditionNode('c')
+    # cnode2 = PropConditionNode('d')
+    # parll = Parallel('And')
+    # parll.add_children([cnode1, cnode2])
+    # anddec = And(parll)
+    # globallyd = Globally(anddec)
+    goalspec = '(G (c & d))'
+    globallyd = create_recognizer(goalspec)
+    expriments(traces, globallyd, [globallyd], goalspec, args)
 
 
 # Experiment 11 for simple globally operator
@@ -489,24 +499,26 @@ def composite2_globally_and_next(args, verbos=True):
     else:
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
 
-    cnode1 = PropConditionNode('c')
-    cnode2 = PropConditionNode('d')
-    parll1 = Parallel('And1')
-    parll1.add_children([cnode1, cnode2])
-    anddec1 = And(parll1)
-    globallyd = Globally(anddec1)
+    # cnode1 = PropConditionNode('c')
+    # cnode2 = PropConditionNode('d')
+    # parll1 = Parallel('And1')
+    # parll1.add_children([cnode1, cnode2])
+    # anddec1 = And(parll1)
+    # globallyd = Globally(anddec1)
 
-    cnode3 = PropConditionNode('a')
-    cnode4 = PropConditionNode('b')
-    parll2 = Parallel('And2')
-    parll2.add_children([cnode3, cnode4])
-    anddec2 = And(parll2)
-    globallya = Globally(anddec2)
+    # cnode3 = PropConditionNode('a')
+    # cnode4 = PropConditionNode('b')
+    # parll2 = Parallel('And2')
+    # parll2.add_children([cnode3, cnode4])
+    # anddec2 = And(parll2)
+    # globallya = Globally(anddec2)
 
-    parll3 = Parallel('And3')
-    parll3.add_children([globallyd, globallya])
-    anddec3 = And(parll3)
-    expriments(traces, anddec3, [anddec3], '(G (c & d)) & (G (a & b))', args)
+    # parll3 = Parallel('And3')
+    # parll3.add_children([globallyd, globallya])
+    # anddec3 = And(parll3)
+    goalspec = '(G (c & d)) & (G (a & b))'
+    anddec3 = create_recognizer(goalspec)
+    expriments(traces, anddec3, [anddec3], goalspec, args)
 
 
 
@@ -568,10 +580,12 @@ def finally2decorator(args, verbos=True):
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
 
     # Experiment variables
-    cnode = PropConditionNode('a')
-    # ndecorator = Negation(cnode, 'Invert')
-    fdecorator = Finally(cnode, 'Finally')
-    expriments(traces, fdecorator, [fdecorator], 'F a', args)
+    # cnode = PropConditionNode('a')
+    # # ndecorator = Negation(cnode, 'Invert')
+    # fdecorator = Finally(cnode, 'Finally')
+    goalspec = 'F a'
+    fdecorator = create_recognizer(goalspec)
+    expriments(traces, fdecorator, [fdecorator], goalspec, args)
 
 
 # Experiment 13 for simple finally operator
@@ -606,14 +620,15 @@ def composite1_finally_and(args, verbos=True):
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
 
     # Experiment variables
-    cnode1 = PropConditionNode('a')
-    cnode2 = PropConditionNode('b')
-    parll2 = Parallel('And')
-    parll2.add_children([cnode1, cnode2])
-    anddec2 = And(parll2)
+    # cnode1 = PropConditionNode('a')
+    # cnode2 = PropConditionNode('b')
+    # parll2 = Parallel('And')
+    # parll2.add_children([cnode1, cnode2])
+    # anddec2 = And(parll2)
 
-    fdecorator = Finally(anddec2, 'Finally')
-    expriments(traces, fdecorator, [fdecorator], 'F (a & b)', args)
+    goalspec = 'F (a & b)'
+    fdecorator = create_recognizer(goalspec)
+    expriments(traces, fdecorator, [fdecorator], goalspec, args)
 
 
 
@@ -648,24 +663,26 @@ def composite2_finally_and_next(args, verbos=True):
     else:
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
 
-    cnode1 = PropConditionNode('c')
-    cnode2 = PropConditionNode('d')
-    parll1 = Parallel('And1')
-    parll1.add_children([cnode1, cnode2])
-    anddec1 = And(parll1)
-    globallyd = Finally(anddec1)
+    # cnode1 = PropConditionNode('c')
+    # cnode2 = PropConditionNode('d')
+    # parll1 = Parallel('And1')
+    # parll1.add_children([cnode1, cnode2])
+    # anddec1 = And(parll1)
+    # globallyd = Finally(anddec1)
 
-    cnode3 = PropConditionNode('a')
-    cnode4 = PropConditionNode('b')
-    parll2 = Parallel('And2')
-    parll2.add_children([cnode3, cnode4])
-    anddec2 = And(parll2)
-    globallya = Finally(anddec2)
+    # cnode3 = PropConditionNode('a')
+    # cnode4 = PropConditionNode('b')
+    # parll2 = Parallel('And2')
+    # parll2.add_children([cnode3, cnode4])
+    # anddec2 = And(parll2)
+    # globallya = Finally(anddec2)
 
-    parll3 = Parallel('And3')
-    parll3.add_children([globallyd, globallya])
-    anddec3 = And(parll3)
-    expriments(traces, anddec3, [anddec3], '(F (c & d)) & (F (a & b))', args)
+    # parll3 = Parallel('And3')
+    # parll3.add_children([globallyd, globallya])
+
+    goalspec = '(F (c & d)) & (F (a & b))'
+    anddec3 = create_recognizer(goalspec)
+    expriments(traces, anddec3, [anddec3], goalspec, args)
 
 
 # Experiment 15 for simple finally operator
@@ -803,15 +820,18 @@ def until2subtree(args, verbos=True):
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
 
     # Experiment variables
-    cnode1 = PropConditionNode('a')
-    cnode2 = PropConditionNode('b')
-    parll2 = Sequence('Seq')
-    untila = UntilA(cnode1)
-    untilb = UntilB(cnode2)
-    parll2.add_children([untilb, untila])
-    anddec2 = And(parll2)
-    until = Until(anddec2)
-    expriments(traces, until, [until], '(a U b)', args)
+    # cnode1 = PropConditionNode('a')
+    # cnode2 = PropConditionNode('b')
+    # parll2 = Sequence('Seq')
+    # untila = UntilA(cnode1)
+    # untilb = UntilB(cnode2)
+    # parll2.add_children([untilb, untila])
+    # anddec2 = And(parll2)
+
+    goalspec = '(a U b)'
+    until = create_recognizer(goalspec)
+
+    expriments(traces, until, [until], goalspec, args)
 
 
 def composite1_until_until(args, verbos=True):
@@ -852,26 +872,28 @@ def composite1_until_until(args, verbos=True):
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
 
     # Experiment variables
-    cnode1 = PropConditionNode('a')
-    cnode2 = PropConditionNode('b')
+    # cnode1 = PropConditionNode('a')
+    # cnode2 = PropConditionNode('b')
 
-    parll2 = Sequence('Seq')
-    untila = UntilA(cnode1, name='A')
-    untilb = UntilB(cnode2, name='B')
-    parll2.add_children([untilb, untila])
-    anddec2 = And(parll2)
-    until1 = Until(anddec2, 'U1')
+    # parll2 = Sequence('Seq')
+    # untila = UntilA(cnode1, name='A')
+    # untilb = UntilB(cnode2, name='B')
+    # parll2.add_children([untilb, untila])
+    # anddec2 = And(parll2)
+    # until1 = Until(anddec2, 'U1')
 
 
-    cnode3 = PropConditionNode('c')
-    untilb1 = UntilB(cnode3, 'C')
-    untila1 = UntilA(until1, 'AUB')
-    parll3 = Sequence('Seq1')
-    parll3.add_children([untilb1, untila1])
-    anddec3 = And(parll3)
-    until2 = Until(anddec3, 'U')
+    # cnode3 = PropConditionNode('c')
+    # untilb1 = UntilB(cnode3, 'C')
+    # untila1 = UntilA(until1, 'AUB')
+    # parll3 = Sequence('Seq1')
+    # parll3.add_children([untilb1, untila1])
+    # anddec3 = And(parll3)
 
-    expriments(traces, until2, [until2], '((a U b) U c)', args)
+    goalspec = '((a U b) U c)'
+    until2 = create_recognizer(goalspec)
+
+    expriments(traces, until2, [until2], goalspec, args)
 
 
 
@@ -913,29 +935,31 @@ def composite1_until_next_and(args, verbos=True):
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
 
     # Experiment variables
-    cnode1 = PropConditionNode('a')
-    cnode2 = PropConditionNode('b')
-    cnode3 = PropConditionNode('c')
-    cnode4 = PropConditionNode('d')
+    # cnode1 = PropConditionNode('a')
+    # cnode2 = PropConditionNode('b')
+    # cnode3 = PropConditionNode('c')
+    # cnode4 = PropConditionNode('d')
 
-    nextd = Next(cnode3)
-    parll = Parallel('And1')
-    parll.add_children([nextd, cnode4])
-    aand = And(parll)
+    # nextd = Next(cnode3)
+    # parll = Parallel('And1')
+    # parll.add_children([nextd, cnode4])
+    # aand = And(parll)
 
-    parll1 = Parallel('And2')
-    parll1.add_children([cnode1, cnode2])
-    band = And(parll1)
+    # parll1 = Parallel('And2')
+    # parll1.add_children([cnode1, cnode2])
+    # band = And(parll1)
 
 
-    parll2 = Sequence('Seq')
-    untila = UntilA(aand, name='A')
-    untilb = UntilB(band, name='B')
-    parll2.add_children([untilb, untila])
-    anddec2 = And(parll2)
-    until1 = Until(anddec2, 'U1')
+    # parll2 = Sequence('Seq')
+    # untila = UntilA(aand, name='A')
+    # untilb = UntilB(band, name='B')
+    # parll2.add_children([untilb, untila])
+    # anddec2 = And(parll2)
 
-    expriments(traces, until1, [until1], '(((X c) & d) U (a & b))', args)
+    goalspec = '(((X c) & d) U (a & b))'
+    until1 = create_recognizer(goalspec)
+
+    expriments(traces, until1, [until1], goalspec, args)
 
 
 
@@ -977,30 +1001,32 @@ def composite1_until_next_and1(args, verbos=True):
         traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
 
     # Experiment variables
-    cnode1 = PropConditionNode('a')
-    cnode2 = PropConditionNode('b')
-    cnode3 = PropConditionNode('c')
-    cnode4 = PropConditionNode('d')
+    # cnode1 = PropConditionNode('a')
+    # cnode2 = PropConditionNode('b')
+    # cnode3 = PropConditionNode('c')
+    # cnode4 = PropConditionNode('d')
 
-    nextd = Next(cnode3)
-    parll = Parallel('And1')
-    parll.add_children([nextd, cnode4])
-    aand = And(parll)
+    # nextd = Next(cnode3)
+    # parll = Parallel('And1')
+    # parll.add_children([nextd, cnode4])
+    # aand = And(parll)
 
-    nexta = Next(cnode1)
-    parll1 = Parallel('And2')
-    parll1.add_children([nexta, cnode2])
-    band = And(parll1)
+    # nexta = Next(cnode1)
+    # parll1 = Parallel('And2')
+    # parll1.add_children([nexta, cnode2])
+    # band = And(parll1)
 
 
-    parll2 = Sequence('Seq')
-    untila = UntilA(aand, name='A')
-    untilb = UntilB(band, name='B')
-    parll2.add_children([untilb, untila])
-    anddec2 = And(parll2)
-    until1 = Until(anddec2, 'U1')
+    # parll2 = Sequence('Seq')
+    # untila = UntilA(aand, name='A')
+    # untilb = UntilB(band, name='B')
+    # parll2.add_children([untilb, untila])
+    # anddec2 = And(parll2)
 
-    expriments(traces, until1, [until1], '(((X c) & d) U ((X a) & b))', args)
+    goalspec = '(((X c) & d) U ((X a) & b))'
+    until1 = create_recognizer(goalspec)
+
+    expriments(traces, until1, [until1], goalspec, args)
 
 
 def main(args):
