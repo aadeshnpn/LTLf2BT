@@ -6,20 +6,49 @@ def testing():
     parser = LTLfParser()
 
     # formula_string = "((X a) & (b)) U c"
-    formula_string = " (G (F a_12))"
+    # formula_string = " (G (F a_12))"
+    formula_string = "X (a_12 & (X (b U c)))"
 
     formula = parser(formula_string)        # returns a LTLfFormula
 
     t1 = [
-        {'a_12': False, 'b': True, 'c': False},
         {'a_12': False, 'b': False, 'c': False},
-        {'a_12': False, 'b': True, 'c': True},
-        {'a_12': True, 'b': True, 'c': False},
         {'a_12': True, 'b': False, 'c': False},
+        {'a_12': False, 'b': True, 'c': False},
+        {'a_12': False, 'b': True, 'c': False},
+        {'a_12': False, 'b': True, 'c': False},
+        {'a_12': False, 'b': False, 'c': True},
         ]
 
     print(formula.truth(t1))
 
+
+def ppatasks():
+    parser = LTLfParser()
+
+    # formula_string = "((X a) & (b)) U c"
+    # formula_string = " (X (a & b))"
+    # formula_string = " (X (F a))"
+    # formula_string = "(a)|(true & (X (true U a)))"
+    ## t -> trap, c -> carrying, s -> found site,
+    ppa1 = '(!t & s) | ( (!t & !c) & X((!t) U (!t & s)))'
+    ppa2 = '(!t & c) | ( (!t & s) & X((!t) U (!t & c)))'
+    formula_string = '('+ ppa1 + ') U (' + ppa2 + ')'
+    formula = parser(formula_string)        # returns a LTLfFormula
+    print(formula)
+
+    t1 = [
+        {'t': False, 's': False, 'c': False},
+        {'t': False, 's': False, 'c': False},
+        {'t': False, 's': False, 'c': False},
+        {'t': False, 's': True, 'c': False},
+        {'t': False, 's': True, 'c': False},
+        {'t': False, 's': True, 'c': False},
+        {'t': False, 's': True, 'c': True},
+        {'t': False, 's': True, 'c': True},
+        ]
+
+    print(formula.truth(t1))
 
 def main():
 
@@ -44,4 +73,5 @@ def main():
 
 # main()
 
-testing()
+#testing()
+ppatasks()
