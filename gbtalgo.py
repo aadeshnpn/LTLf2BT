@@ -85,7 +85,7 @@ class PropConditionNodeEnv(Behaviour):
 
     def __init__(self, name, env):
         """Init method for the condition node."""
-        super(PropConditionNode, self).__init__(name)
+        super(PropConditionNodeEnv, self).__init__(name)
         self.proposition_symbol = name
         self.env = env
         # self.blackboard = blackboard.Client(name='gbt')
@@ -661,7 +661,7 @@ class DeltaA(Decorator):
             child : child behaviour node
             name : the decorator name
         """
-        super(Until, self).__init__(name=name, child=child)
+        super(DeltaA, self).__init__(name=name, child=child)
         self.idx = 0
         self.blackboard = blackboard.Client(name='gbt')
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
@@ -705,7 +705,7 @@ class ActionNode(Behaviour):
 
     def __init__(self, name, env, planner=None):
         """Init method for the action node."""
-        super(ActionNode, self).__init__(name)
+        super(ActionNode, self).__init__('Action'+name)
         self.action_symbol = name
         # self.blackboard = blackboard.Client(name='gbt')
         # self.blackboard.register_key(key='trace', access=common.Access.WRITE)
@@ -789,9 +789,9 @@ def create_generator():
     pass
 
 
-def create_planner(postcond, plan_algo):
-    planselector = Selector('Planner')
-    pass
+def create_planner(postcond='C', env=None, plan_algo=None):
+    planroot = create_planner_subtree(postcond, env, plan_algo)
+    print(py_trees.display.ascii_tree(planroot))
 
 
 def parse_ltlf(formula):
@@ -866,3 +866,4 @@ def parse_ltlf(formula):
 
 
 # main()
+create_planner()

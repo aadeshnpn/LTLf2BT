@@ -59,6 +59,41 @@ def ppatasks():
     expriments([t1], ppabt, [ppabt], formula_string, args)
 
 
+def ppatasksuntil():
+    parser = LTLfParser()
+
+    # formula_string = "((X a) & (b)) U c"
+    # formula_string = " (X (a & b))"
+    # formula_string = " (X (F a))"
+    # formula_string = "(a)|(true & (X (true U a)))"
+    ## t -> trap, c -> carrying, s -> found site,
+    ppa1 = '(!t & s) | ( (!t & !c) & X((!t) U (!t & s)))'
+    ppa2 = '(!t & h) | ( (!t & c) & X((!t) U (!t & h)))'
+    formula_string = '('+ ppa1 + ') U (' + ppa2 + ')'
+    # formula = parser(ppa1)        # returns a LTLfFormula
+    # print(formula)
+    ppabt = create_recognizer(formula_string)
+
+    t1 = [
+        {'t': False, 'h': False, 's': False, 'c': False},
+        {'t': False, 'h': False, 's': False, 'c': False},
+        {'t': False, 'h': False, 's': False, 'c': False},
+        {'t': False, 'h': False, 's': True, 'c': True},
+        {'t': False, 'h': False, 's': True, 'c': True},
+        {'t': False, 'h': False, 's': True, 'c':True},
+        {'t': False, 'h': False, 's': True, 'c': True},
+        {'t': False, 'h': True, 's': True, 'c': True},
+        ]
+
+    # print(formula.truth(t1))
+    class args:
+        def __init__(self):
+            self.trace ='fixed'
+    args.trace = 'fixed'
+
+    expriments([t1], ppabt, [ppabt], formula_string, args)
+
+
 def main():
 
     parser = LTLfParser()
@@ -84,3 +119,4 @@ def main():
 
 #testing()
 ppatasks()
+ppatasksuntil()
