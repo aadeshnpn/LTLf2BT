@@ -6,6 +6,7 @@ from py_trees.composites import Sequence, Selector, Parallel
 from py_trees.decorators import Decorator, Inverter
 from py_trees.trees import BehaviourTree
 from py_trees.behaviour import Behaviour
+from py_trees import common, blackboard
 import py_trees
 from py_trees import common
 import copy
@@ -66,6 +67,65 @@ class PropConditionNode(Behaviour):
         #     self.trace[self.index][self.proposition_symbol])
         try:
             if self.trace[self.index][self.proposition_symbol]:
+                return_value = common.Status.SUCCESS
+            else:
+                return_value = common.Status.FAILURE
+        except IndexError:
+            return_value = common.Status.FAILURE
+
+        return return_value
+
+
+class PropConditionNodeEnv(Behaviour):
+    """Condition node for the atomic propositions.
+
+    Inherits the Behaviors class from py_trees. This
+    behavior implements the condition node for the atomic LTLf propositions.
+    """
+
+    def __init__(self, name, env):
+        """Init method for the condition node."""
+        super(PropConditionNode, self).__init__(name)
+        self.proposition_symbol = name
+        self.env = env
+        # self.blackboard = blackboard.Client(name='gbt')
+        # self.blackboard.register_key(key='trace', access=common.Access.WRITE)
+
+    # def setup(self, timeout, value=False):
+    def setup(self, timeout, trace=[], i=0):
+        """Have defined the setup method.
+
+        This method defines the other objects required for the
+        condition node.
+        Args:
+        timeout: property from Behavior super class. Not required
+        symbol: Name of the proposition symbol
+        value: A dict object with key as the proposition symbol and
+               boolean value as values. Supplied by trace.
+        """
+        self.index = i
+        self.trace = trace
+
+    def initialise(self):
+        """Everytime initialization. Not required for now."""
+        pass
+
+    def reset(self, i=0):
+        self.index = i
+
+    def increment(self):
+        self.index += 1
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        """
+        # if the proposition value is true
+        ## return Success
+        # else
+        ## return Failure
+        try:
+            if self.env.states[self.proposition_symbol]:
                 return_value = common.Status.SUCCESS
             else:
                 return_value = common.Status.FAILURE
@@ -586,6 +646,121 @@ class UntilA(Decorator):
         return return_value
 
 
+# Just a simple decorator node that implements Delta_A operator for planner
+class DeltaA(Decorator):
+    """Decorator node for the Delta A operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Until LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Until, self).__init__(name=name, child=child)
+        self.idx = 0
+        self.blackboard = blackboard.Client(name='gbt')
+        self.blackboard.register_key(key='trace', access=common.Access.WRITE)
+
+    def reset(self, i=0):
+        self.idx = i
+        def reset(children, i):
+            for child in children:
+                try:
+                    child.reset(i)
+                except AttributeError:
+                    reset(child.children, i)
+        reset(self.children, i)
+
+    def setup(self, timeout, trace, i=0):
+        self.idx = i
+        self.trace = trace
+        self.decorated.setup(0, self.trace, self.idx)
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Until operator status
+
+        """
+        #  Repeat until logic for decorator
+        # print('Until', self.idx, self.decorated.status)
+        return_value = self.decorated.status
+        ## Add to dashboard is the state satisfies the post condition
+        if return_value == common.Status.SUCCESS:
+            self.blackboard.trace.append(self.env.states)
+        return return_value
+
+
+class ActionNode(Behaviour):
+    """Action node for the planning atomic propositions.
+
+    Inherits the Behaviors class from py_trees. This
+    behavior implements the action node for the planning LTLf propositions.
+    """
+
+    def __init__(self, name, env, planner=None):
+        """Init method for the action node."""
+        super(ActionNode, self).__init__(name)
+        self.action_symbol = name
+        # self.blackboard = blackboard.Client(name='gbt')
+        # self.blackboard.register_key(key='trace', access=common.Access.WRITE)
+        self.env = env
+        self.planner = planner
+
+    def setup(self, timeout, trace=None, i=0):
+        """Have defined the setup method.
+
+        This method defines the other objects required for the
+        condition node.
+        Args:
+        timeout: property from Behavior super class. Not required
+        symbol: Name of the proposition symbol
+        value: A dict object with key as the proposition symbol and
+               boolean value as values. Supplied by trace.
+        """
+        self.index = i
+
+    def initialise(self):
+        """Everytime initialization. Not required for now."""
+        pass
+
+    def reset(self, i=0):
+        self.index = i
+
+    def increment(self):
+        self.index += 1
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        """
+        # Plan action and take that action in the environment.
+        pass
+
+
+def create_planner_subtree(pname, env, planner):
+    postcond_left = PropConditionNodeEnv(pname, env)
+    deltaA_left = DeltaA(postcond_left, 'DeltaAL')
+
+    postcond_right = PropConditionNodeEnv(pname, env)
+    deltaA_right = DeltaA(postcond_right, 'DeltaAR')
+
+    actionplanner = ActionNode(pname, env, planner=planner)
+
+    parallelnode = Parallel('PlanParallel')
+    parallelnode.add_children([actionplanner, deltaA_right])
+
+    planroot = Selector('PRoot')
+    planroot.add_children([deltaA_left, parallelnode])
+
+    return planroot
+
+
 def create_recognizer(formulas, debug=False, bt=False):
     parser = LTLfParser()
     formula = parser(formulas)
@@ -611,6 +786,11 @@ def create_ppatask(postcond, precond, taskcnstr, gcnstr):
 
 
 def create_generator():
+    pass
+
+
+def create_planner(postcond, plan_algo):
+    planselector = Selector('Planner')
     pass
 
 
@@ -656,11 +836,11 @@ def parse_ltlf(formula):
                 leftnode = parse_ltlf(leftformual)
                 rightnode = parse_ltlf(rightformula)
                 useq = Sequence('UntilSeq')
-                untila = UntilA(leftnode)
-                untilb = UntilB(rightnode)
+                untila = UntilA(leftnode, name='<j')
+                untilb = UntilB(rightnode, name='=j')
                 useq.add_children([untilb, untila])
-                anddec2 = And(useq)
-                untildecorator = Until(anddec2)
+                anddec2 = And(useq, name='UntilAnd')
+                untildecorator = Until(anddec2, name='Until')
                 return untildecorator
 
 
