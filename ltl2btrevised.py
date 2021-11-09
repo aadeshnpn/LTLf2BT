@@ -1029,6 +1029,13 @@ def composite1_until_next_and1(args, verbos=True):
     expriments(traces, until1, [until1], goalspec, args)
 
 
+def custom_goalspec(args):
+    goalspec = args.goalspec
+    traces = getrandomtrace(n=args.no_trace_2_test, maxtracelen=args.max_trace_len)
+    btrec = create_recognizer(goalspec)
+    expriments(traces, btrec, [btrec], goalspec, args)
+    print(args)
+
 def main(args):
     if args.test == 'P':
         proposition2condition(args)
@@ -1066,6 +1073,8 @@ def main(args):
         composite1_until_next_and(args)
     elif args.test == 'C1_U_X_&_X':
         composite1_until_next_and1(args)
+    elif args.test =='CUSTOM':
+        custom_goalspec(args)
 
 
 if __name__ == '__main__':
@@ -1075,9 +1084,10 @@ if __name__ == '__main__':
         '--test', type=str, choices = [
             'P', '~', '&', 'X', 'G', 'F', 'U',
             'C1_X_&', 'C2_X_&', 'C3_X_X', 'C4_X_&',
-            'C1_G_&', 'C2_G_&_X', 'C1_F_&', 'C2_F_&_X', 'C1_U_U', 'C1_U_X_&', 'C1_U_X_&_X'
+            'C1_G_&', 'C2_G_&_X', 'C1_F_&', 'C2_F_&_X', 'C1_U_U', 'C1_U_X_&', 'C1_U_X_&_X', 'CUSTOM'
             ])
     parser.add_argument('--trace', type=str, choices = ['fixed', 'random'], default='fixed')
+    parser.add_argument('--goalspec', type=str, default='(a U b)')
     parser.add_argument('--max_trace_len', type=int, default=3)
     parser.add_argument('--no_trace_2_test', type=int, default=16)
 

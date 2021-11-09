@@ -866,4 +866,4 @@ def parse_ltlf(formula):
 
 
 # main()
-create_planner()
+# create_planner()
