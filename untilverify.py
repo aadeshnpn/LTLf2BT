@@ -27,8 +27,10 @@ def test_mdp_cheese_trace():
         {'c': True, 't': False, 'h': True}
     ]
     psi1 = "(G (!t) & c) | ( (G (!t)) & ( (G (!t)) U ((G (!t) & c))))"
-    psi2 = "(G (!t) & c & h) | ( (G (!t) & c) & ( (G (!t)) U ((G (!t) & c & h))))"
-    psi = psi1 +' & ' + psi2
+    psi2 = "(G (!t) & c & h) | ( (G (!t) & F (c)) & ( (G (!t)) U ((G (!t) & c & h))))"
+    # psi = psi1 +' & ' + psi2
+    # F Task1 and X F (Task2)
+    psi = 'F(' + psi1 + ') & X(F(' + psi2+'))'
     parser = LTLfParser()
     formula1 = parser(psi1)
     formula2 = parser(psi2)
@@ -36,6 +38,7 @@ def test_mdp_cheese_trace():
     print(formula1.truth(trace))
     print(formula2.truth(trace))
     print(formula.truth(trace))
+
 
 
 def testing():
