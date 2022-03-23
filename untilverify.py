@@ -3,22 +3,58 @@ from gbtalgo import create_recognizer
 from ltl2btrevised import expriments
 
 
+def test_mdp_cheese_trace():
+    # trace = s31,s21,s22,s12,s13,s14,s24,s34,s44,s34,s24,s14,s13,s12,s22,s21,s31,s41
+    # len(trace)=18
+    trace = [
+        {'c': False, 't': False, 'h': False},
+        {'c': False, 't': False, 'h': False},
+        {'c': False, 't': False, 'h': False},
+        {'c': False, 't': False, 'h': False},
+        {'c': False, 't': False, 'h': False},
+        {'c': False, 't': False, 'h': False},
+        {'c': False, 't': False, 'h': False},
+        {'c': False, 't': False, 'h': False},
+        {'c': True, 't': False, 'h': False},
+        {'c': True, 't': False, 'h': False},
+        {'c': True, 't': False, 'h': False},
+        {'c': True, 't': False, 'h': False},
+        {'c': True, 't': False, 'h': False},
+        {'c': True, 't': False, 'h': False},
+        {'c': True, 't': False, 'h': False},
+        {'c': True, 't': False, 'h': False},
+        {'c': True, 't': False, 'h': False},
+        {'c': True, 't': False, 'h': True}
+    ]
+    psi1 = "(G (!t) & c) | ( (G (!t)) & ( (G (!t)) U ((G (!t) & c))))"
+    psi2 = "(G (!t) & c & h) | ( (G (!t) & c) & ( (G (!t)) U ((G (!t) & c & h))))"
+    psi = psi1 +' & ' + psi2
+    parser = LTLfParser()
+    formula1 = parser(psi1)
+    formula2 = parser(psi2)
+    formula = parser(psi)
+    print(formula1.truth(trace))
+    print(formula2.truth(trace))
+    print(formula.truth(trace))
+
+
 def testing():
     parser = LTLfParser()
 
     # formula_string = "((X a) & (b)) U c"
     # formula_string = " (G (F a_12))"
-    formula_string = "X (a_12 & (X (b U c)))"
+    # formula_string = "(X(b) U X(c))"
+    formula_string = "(b U c)"
 
     formula = parser(formula_string)        # returns a LTLfFormula
 
     t1 = [
-        {'a_12': False, 'b': False, 'c': False},
-        {'a_12': True, 'b': False, 'c': False},
-        {'a_12': False, 'b': True, 'c': False},
-        {'a_12': False, 'b': True, 'c': False},
-        {'a_12': False, 'b': True, 'c': False},
         {'a_12': False, 'b': False, 'c': True},
+        # {'a_12': True, 'b': False, 'c': True},
+        # {'a_12': False, 'b': True, 'c': False},
+        # {'a_12': False, 'b': True, 'c': False},
+        # {'a_12': False, 'b': True, 'c': False},
+        # {'a_12': False, 'b': False, 'c': True},
         ]
 
     print(formula.truth(t1))
@@ -117,6 +153,7 @@ def main():
 
 # main()
 
-#testing()
-ppatasks()
-ppatasksuntil()
+# testing()
+# ppatasks()
+# ppatasksuntil()
+test_mdp_cheese_trace()
