@@ -40,6 +40,23 @@ def test_mdp_cheese_trace():
     print(formula.truth(trace))
 
 
+def test_sequentail_task():
+    # psi = 'F(a & X b)'
+    psi = 'F(a) & (X F(b))'
+    trace = [
+        {'a': False, 'b': False},
+        {'a': False, 'b': False},
+        {'a': False, 'b': False},
+        {'a': True, 'b': False},
+        {'a': False, 'b': True},
+        {'a': False, 'b': False},
+        {'a': False, 'b': False},
+        {'a': False, 'b': False}
+    ]
+    parser = LTLfParser()
+    formula1 = parser(psi)
+    print(formula1.truth(trace))
+
 
 def testing():
     parser = LTLfParser()
@@ -159,4 +176,5 @@ def main():
 # testing()
 # ppatasks()
 # ppatasksuntil()
-test_mdp_cheese_trace()
+# test_mdp_cheese_trace()
+test_sequentail_task()
