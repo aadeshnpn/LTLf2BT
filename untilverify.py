@@ -40,9 +40,91 @@ def test_mdp_cheese_trace():
     print(formula.truth(trace))
 
 
+def new_task_grammar():
+    trace = [
+        {'p': False, 'g': True, 't': False, 'o': False},
+        {'p': False, 'g': True, 't': False, 'o': False},
+        {'p': False, 'g': True, 't': False, 'o': False},
+        {'p': False, 'g': True, 't': True, 'o': False},
+        {'p': False, 'g': True, 't': True, 'o': False},
+        {'p': False, 'g': True, 't': True, 'o': False},
+        {'p': False, 'g': True, 't': True, 'o': False},
+        {'p': False, 'g': True, 't': True, 'o': False},
+        {'p': True, 'g': True,  't': True,  'o': False},
+        {'p': True, 'g': True,  't': True,  'o': False},
+        {'p': True, 'g': True,  't': True,  'o': False},
+        {'p': True, 'g': True,  't': True,  'o': False},
+        {'p': True, 'g': True,  't': True,  'o': False},
+        {'p': True, 'g': True,  't': True,  'o': False},
+        {'p': True, 'g': True,  't': True,  'o': False},
+        {'p': True, 'g': True,  't': True,  'o': False},
+        {'p': True, 'g': True,  't': True,  'o': False},
+        {'p': True, 'g': True,  't': True,  'o': True}
+    ]
+    # psi1 = "(G (g) & o) | ( (G (g)) & ( (G (g)) U ((G (g) & o))))"
+    # psi1 = "(G (g) & o) | ( (G (g) & F (p)) & ( (G (g)) U ((G (g) & o))))"
+    psi1 = "(F (p U t))"
+    psi2 = "(G (g) & o) | ( (G (g) & F (p)) & ( (G (g) & t) U ((G (g) & o))))"
+    # psi = psi1 +' & ' + psi2
+    # F Task1 and X F (Task2)
+    # psi = 'F(' + psi1 + ') & X(F(' + psi2+'))'
+    parser = LTLfParser()
+    formula1 = parser(psi1)
+    formula2 = parser(psi2)
+    # formula = parser(psi)
+    print(formula1.truth(trace))
+    print(formula2.truth(trace))
+    # print(formula.truth(trace))
+
+
+def mission_with_tau():
+    trace = [
+        {'p': True, 'g': True, 't': True, 'o': False},      # First try
+        {'p': False, 'g': True, 't': True, 'o': False},     #
+        {'p': False, 'g': False, 't': False, 'o': False},   # Global constraint violated
+        {'p': True, 'g': True, 't': True, 'o': False},      ## GBT memory reset, 2nd Try
+        {'p': False, 'g': True, 't': True, 'o': False},     ##
+        {'p': False, 'g': True, 't': True, 'o': False},     ##
+        {'p': False, 'g': True, 't': True, 'o': False},     ##
+        {'p': False, 'g': True, 't': False, 'o': False},    ## Task constraint violated
+        {'p': True, 'g': True,  't': True,  'o': False},    ### GBT memory reset, 3rd try
+        {'p': False, 'g': True,  't': True,  'o': False},   ###
+        {'p': False, 'g': True,  't': True,  'o': False},   ###
+        {'p': False, 'g': True,  't': True,  'o': False},   ###
+        {'p': False, 'g': True,  't': True,  'o': False},   ###
+        {'p': False, 'g': True,  't': True,  'o': False},   ###
+        {'p': False, 'g': True,  't': True,  'o': False},   ###
+        {'p': False, 'g': True,  't': True,  'o': False},   ###
+        {'p': False, 'g': True,  't': True,  'o': False},   ###
+        {'p': False, 'g': True,  't': True,  'o': True}     ### Post condition satisfied.
+    ]
+    etrace = [
+        {'s': False},
+        {'s': False},
+        {'s': True}
+        ]
+    # psi1 = "((G (g) & o) | ( (G (g)) & ( (G (g)) U ((G (g) & o)))))"
+    # psi1 = "((G (g) & o) | ( (G (g) & (F p)) & ( (G (g)) U ((G (g) & o)))))"
+    # psi1 = "(F (p U t))"
+    psi2 = "F ((G (g) & o) |( (G (g) & (p)) & ( (G (g) & t) U ((G (g) & o)))))"
+    psi3 = "F s"
+    # psi = psi1 +' & ' + psi2
+    # F Task1 and X F (Task2)
+    # psi = 'F(' + psi1 + ') & X(F(' + psi2+'))'
+    parser = LTLfParser()
+    formula1 = parser(psi2)
+    formula2 = parser(psi3)
+    # formula2 = parser(psi2)
+    # formula = parser(psi)
+    print('state trace', formula1.truth(trace))
+    print('execution trace', formula2.truth(etrace))
+    # print(formula2.truth(trace))
+    # print(formula.truth(trace))
+
+
 def test_sequentail_task():
-    # psi = 'F(a & X b)'
-    psi = 'F(a) & (X F(b))'
+    psi = 'F(a & X b)'
+    # psi = 'F(a) & (X F(b))'
     trace = [
         {'a': False, 'b': False},
         {'a': False, 'b': False},
@@ -177,4 +259,6 @@ def main():
 # ppatasks()
 # ppatasksuntil()
 # test_mdp_cheese_trace()
-test_sequentail_task()
+# test_sequentail_task()
+# new_task_grammar()
+mission_with_tau()
