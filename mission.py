@@ -139,11 +139,55 @@ def mission_and():
     # print('Task 1 fail and Task 2 failed', formula1.truth(trace3))
 
 
+def mission_sequential():
+    # Task 1 fail
+    trace1 = [
+        {'p': True, 'g': True, 't': True, 'o': False,'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False}
+    ]
+
+    # Task 1 succeed and Task 2 succeed
+    trace2 = [
+        {'p': True, 'g': True, 't': True, 'o': False,'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': True, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': True, 'g': True, 't': True, 'o': False,'q': True, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': True},
+    ]
+
+    # Task 1 succed and Task 2 fail
+    trace3 = [
+        {'p': True, 'g': True, 't': True, 'o': False,'q': True, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': True, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False,'q': True, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False},
+        {'p': False, 'g': True, 't': True, 'o': False, 'q': False, 'h': True, 'u': True, 'n': False},
+    ]
+
+    psi1 = "((G (g) & o) |( (G (g) & (p)) & ( (G (g) & t) U ((G (g) & o)))))"
+    psi2 = "((G (h) & n) |( (G (h) & (F(q))) & ( (G (h) & u) U ((G (h) & n)))))"
+    psi = psi1 + '& ' + psi2
+    parser = LTLfParser()
+    formula1 = parser(psi)
+    print('Task (F, D)', formula1.truth(trace1))
+    print('Task (T, T)', formula1.truth(trace2))
+    print('Task (T, F)', formula1.truth(trace3))
+
+
 def main():
     # mission_only_task()
     # mission_finally()
     # mission_or()
-    mission_and()
+    # mission_and()
+    mission_sequential()
 
 
 if __name__ == '__main__':
