@@ -122,6 +122,47 @@ def mission_with_tau():
     # print(formula.truth(trace))
 
 
+def mission_with_tau_next():
+    trace = [
+        {'p': True, 'g': True, 't': True, 'o': False},      # First try
+        {'p': False, 'g': True, 't': True, 'o': False},     #
+        {'p': False, 'g': True,  't': True,  'o': True},    # <PPATask> returns success.
+        {'p': False, 'g': True,  't': True,  'o': True}     ## Second time only PostBlk evaluation is needed
+    ]
+    etrace = [
+        {'s': True},
+        {'s': True}
+        ]
+    # psi1 = "((G (g) & o) | ( (G (g)) & ( (G (g)) U ((G (g) & o)))))"
+    # psi1 = "((G (g) & o) | ( (G (g) & (F p)) & ( (G (g)) U ((G (g) & o)))))"
+    # psi1 = "(F (p U t))"
+    psi2 = "X ((G (g) & o) |( (G (g) & (p)) & ( (G (g) & t) U ((G (g) & o)))))"
+    psi3 = "X s"
+    # psi = psi1 +' & ' + psi2
+    # F Task1 and X F (Task2)
+    # psi = 'F(' + psi1 + ') & X(F(' + psi2+'))'
+    parser = LTLfParser()
+    formula1 = parser(psi2)
+    formula2 = parser(psi3)
+    # formula2 = parser(psi2)
+    # formula = parser(psi)
+    print('state trace', formula1.truth(trace))
+    print('execution trace', formula2.truth(etrace))
+    # print(formula2.truth(trace))
+    # print(formula.truth(trace))
+
+
+def mission_with_tau_seq():
+    etrace = [
+        {'o': True, 't': False},
+        {'t': True}
+        ]
+    psi3 = "o & X t"
+    parser = LTLfParser()
+    formula2 = parser(psi3)
+    print('execution trace', formula2.truth(etrace))
+
+
 def test_sequentail_task():
     psi = 'F(a & X b)'
     # psi = 'F(a) & (X F(b))'
@@ -261,4 +302,4 @@ def main():
 # test_mdp_cheese_trace()
 # test_sequentail_task()
 # new_task_grammar()
-mission_with_tau()
+mission_with_tau_seq()
