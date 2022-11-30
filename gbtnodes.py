@@ -13,7 +13,7 @@ import argparse
 import numpy as np
 
 
-class PropConditionNode(Behaviour):
+class ConditionNode(Behaviour):
     """Condition node for the atomic propositions.
 
     Inherits the Behaviors class from py_trees. This
@@ -22,7 +22,7 @@ class PropConditionNode(Behaviour):
 
     def __init__(self, name):
         """Init method for the condition node."""
-        super(PropConditionNode, self).__init__(name)
+        super(ConditionNode, self).__init__(name)
         self.proposition_symbol = name
         self.blackboard = blackboard.Client(name='gbt')
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
@@ -194,3 +194,74 @@ class TaskCnstr(Decorator):
         self.idx += 1
 
         return self.memory
+
+
+class ActionNode(Behaviour):
+    """Action node for the planning atomic propositions.
+
+    Inherits the Behaviors class from py_trees. This
+    behavior implements the action node for the planning LTLf propositions.
+    """
+
+    def __init__(self, name, env, planner=None):
+        """Init method for the action node."""
+        super(ActionNode, self).__init__('Action'+name)
+        self.action_symbol = name
+        # self.blackboard = blackboard.Client(name='gbt')
+        # self.blackboard.register_key(key='trace', access=common.Access.WRITE)
+        self.env = env
+        self.planner = planner
+
+    def setup(self, timeout, trace=None, i=0):
+        """Have defined the setup method.
+
+        This method defines the other objects required for the
+        condition node.
+        Args:
+        timeout: property from Behavior super class. Not required
+        symbol: Name of the proposition symbol
+        value: A dict object with key as the proposition symbol and
+               boolean value as values. Supplied by trace.
+        """
+        self.index = i
+
+    def initialise(self):
+        """Everytime initialization. Not required for now."""
+        pass
+
+    def reset(self, i=0):
+        self.index = i
+
+    def increment(self):
+        self.index += 1
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        """
+        # Plan action and take that action in the environment.
+        pass
+
+
+def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
+    seltector_ppatask = Selector('lambda_ppatask')
+    post_blk = Sequence('sigma_postblk')
+    pre_blk = Sequence('sigma_preblk')
+    task_seq = Sequence('sigma_task')
+    until_seq = Sequence('sigma_until')
+    action_seq = Sequence('sigma_action')
+    precond_node  = ConditionNode(precond)
+    postcond_node  = ConditionNode(postcond)
+    taskcnstr_node  = ConditionNode(taskcnstr)
+    gblcnstr_node  = ConditionNode(gblcnstr)
+    gblcnstr_decorator_1 = Globally(gblcnstr_node)
+    gblcnstr_decorator_2 = Globally(copy.copy(gblcnstr_node))
+    gblcnstr_decorator_3 = Globally(copy.copy(gblcnstr_node))
+    precond_decorator = PreCond(precond_node)
+    taskcnstr_decorator = TaskCnstr(taskcnstr_node)
+    action_seq.add_children([action_node, gblcnstr_decorator_3])
+    until_seq.add_children([taskcnstr_decorator, action_seq])
+    pre_blk.add_children([gblcnstr_decorator_2, precond_decorator])
+    task_seq.add_children([pre_blk, until_seq])
+    post_blk.add_children([gblcnstr_decorator_1, postcond_node])
+    seltector_ppatask.add_children([post_blk, task_seq])
