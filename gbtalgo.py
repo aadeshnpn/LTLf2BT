@@ -776,13 +776,14 @@ def create_recognizer(formulas, debug=False, bt=False):
 def create_ppatask(postcond, precond, taskcnstr, gcnstr):
     # PostCond | (PreCond & X (TaskBulk U PostCond))
     postbulk = gcnstr + ' & '+  postcond
+    postbulk_action = postcond +  ' & ' + gcnstr
     prebulk = gcnstr + ' & '+  precond
-    taskbulk = gcnstr + ' & '+  taskcnstr
-    ppatask = '('+ postbulk + ') | ((' + prebulk + ') & X((' + taskbulk + ') U (' +postbulk + '))' +  ')'
-    print(ppatask)
+    taskbulk = taskcnstr
+    ppatask = '('+ postbulk + ') | ((' + prebulk + ') & ((' + taskbulk + ') U (' + postbulk_action + '))' +  ')'
+    print('PPATask: ',ppatask)
     parser = LTLfParser()
     ppaformula = parser(ppatask)
-    create_recognizer(ppaformula)
+    create_recognizer(ppatask)
 
 
 def create_generator():
@@ -867,3 +868,11 @@ def parse_ltlf(formula):
 
 # main()
 # create_planner()
+# create_ppatask('c', 's', 'o', 't')
+
+formula_string = '(t & c) | ((t & s) & ((o) U (c & t)))'
+print(formula_string)
+create_recognizer(formula_string, bt=True, debug=True)
+# parser = LTLfParser()
+# formula = parser(formula_string)
+# print(formula)
