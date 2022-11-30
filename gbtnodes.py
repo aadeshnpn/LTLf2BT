@@ -240,8 +240,12 @@ class ActionNode(Behaviour):
         Main function that is called when BT ticks.
         """
         # Plan action and take that action in the environment.
-        env.step()
-        self.blackboard.trace = env.curr_state
+        self.env.step()
+        self.blackboard.trace.append(self.env.curr_state)
+        if self.blackboard.trace[-1][self.action_symbol]:
+            return common.Status.SUCCESS
+        else:
+            return common.Status.FAILURE
 
 
 def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):

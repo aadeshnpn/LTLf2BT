@@ -1,4 +1,5 @@
 from gbtnodes import create_PPATask_GBT,ActionNode
+from py_trees import common, blackboard
 from py_trees.trees import BehaviourTree
 import py_trees
 
@@ -32,10 +33,16 @@ def get_trace_1():
 
 def main():
     env = Env(get_trace_1())
+    bboard = blackboard.Client(name='gbt')
+    bboard.register_key(key='trace', access=common.Access.WRITE)
+    bboard.trace = [env.curr_state]
     action_node = ActionNode('b', env)
     ppataskbt = create_PPATask_GBT('a', 'b', 'c', 'd', action_node)
     ppataskbt = BehaviourTree(ppataskbt)
     print(py_trees.display.ascii_tree(ppataskbt.root))
+    for i in range(3):
+        ppataskbt.tick()
+        print(i, ppataskbt.root.status)
 
 
 if __name__ == "__main__":
