@@ -211,6 +211,7 @@ class ActionNode(Behaviour):
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
         self.env = env
         self.planner = planner
+        self.index = 0
 
     def setup(self, timeout, trace=None, i=0):
         """Have defined the setup method.
@@ -240,8 +241,11 @@ class ActionNode(Behaviour):
         Main function that is called when BT ticks.
         """
         # Plan action and take that action in the environment.
+        print('action node',self.index, self.blackboard.trace[-1])
         self.env.step()
+        self.index += 1
         self.blackboard.trace.append(self.env.curr_state)
+        print('action node',self.index, self.blackboard.trace[-1])
         if self.blackboard.trace[-1][self.action_symbol]:
             return common.Status.SUCCESS
         else:

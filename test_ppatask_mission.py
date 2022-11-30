@@ -25,8 +25,9 @@ def get_trace_1():
     # global-constaraint: d
     trace = [
         {'a': True, 'b': False, 'c': True, 'd': True},
+        {'a': True, 'b': False, 'c': False, 'd': True},
         {'a': True, 'b': False, 'c': True, 'd': True},
-        {'a': True, 'b': True, 'c': True, 'd': True}
+        {'a': True, 'b': False, 'c': True, 'd': True}
     ]
     return trace
 
@@ -40,6 +41,8 @@ def main():
     ppataskbt = create_PPATask_GBT('a', 'b', 'c', 'd', action_node)
     ppataskbt = BehaviourTree(ppataskbt)
     print(py_trees.display.ascii_tree(ppataskbt.root))
+    # add debug statement
+    py_trees.logging.level = py_trees.logging.Level.DEBUG
     for i in range(3):
         ppataskbt.tick()
         print(i, ppataskbt.root.status)
