@@ -168,7 +168,7 @@ class TaskCnstr(Decorator):
             child : child behaviour node
             name : the decorator name
         """
-        super(PreCond, self).__init__(name=name, child=child)
+        super(TaskCnstr, self).__init__(name=name, child=child)
         self.idx = 0
         self.memory = common.Status.SUCCESS
 
@@ -207,8 +207,8 @@ class ActionNode(Behaviour):
         """Init method for the action node."""
         super(ActionNode, self).__init__('Action'+name)
         self.action_symbol = name
-        # self.blackboard = blackboard.Client(name='gbt')
-        # self.blackboard.register_key(key='trace', access=common.Access.WRITE)
+        self.blackboard = blackboard.Client(name='gbt')
+        self.blackboard.register_key(key='trace', access=common.Access.WRITE)
         self.env = env
         self.planner = planner
 
@@ -240,11 +240,12 @@ class ActionNode(Behaviour):
         Main function that is called when BT ticks.
         """
         # Plan action and take that action in the environment.
-        pass
+        env.step()
+        self.blackboard.trace = env.curr_state
 
 
 def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
-    seltector_ppatask = Selector('lambda_ppatask')
+    seletector_ppatask = Selector('lambda_ppatask')
     post_blk = Sequence('sigma_postblk')
     pre_blk = Sequence('sigma_preblk')
     task_seq = Sequence('sigma_task')
@@ -264,4 +265,5 @@ def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
     pre_blk.add_children([gblcnstr_decorator_2, precond_decorator])
     task_seq.add_children([pre_blk, until_seq])
     post_blk.add_children([gblcnstr_decorator_1, postcond_node])
-    seltector_ppatask.add_children([post_blk, task_seq])
+    seletector_ppatask.add_children([post_blk, task_seq])
+    return seletector_ppatask
