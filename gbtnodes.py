@@ -170,10 +170,10 @@ class TaskCnstr(Decorator):
         """
         super(TaskCnstr, self).__init__(name=name, child=child)
         self.idx = 0
-        self.memory = common.Status.SUCCESS
+        self.memory = common.Status.FAILURE
 
     def reset(self, i=0):
-        self.memory = common.Status.SUCCESS
+        self.memory = common.Status.FAILURE
 
 
     def setup(self, timeout, i=0):
@@ -185,15 +185,23 @@ class TaskCnstr(Decorator):
         This returns the Precondition logic
         """
         #  Repeat until logic for decorator
-        return_value = self.decorated.status
+        child_status = self.decorated.status
+        # print('taskcnstr', child_status, self.idx)
         if self.idx ==0:
-            self.memory = common.Status.SUCCESS
+            return_value =  common.Status.SUCCESS
         elif (self.idx > 0 and self.memory == common.Status.FAILURE):
-            self.memory = common.Status.FAILURE
+            return_value = common.Status.FAILURE
+        elif (self.idx > 0 and self.memory == common.Status.SUCCESS):
+            return_value = common.Status.SUCCESS
+
+        if self.idx > 0 and self.memory == common.Status.FAILURE:
+            pass
+        else:
+            self.memory = child_status
 
         self.idx += 1
-
-        return self.memory
+        # print('taskcnstr', child_status, self.idx, return_value)
+        return return_value
 
 
 class ActionNode(Behaviour):
@@ -241,11 +249,11 @@ class ActionNode(Behaviour):
         Main function that is called when BT ticks.
         """
         # Plan action and take that action in the environment.
-        print('action node',self.index, self.blackboard.trace[-1])
+        # print('action node',self.index, self.blackboard.trace[-1])
         self.env.step()
         self.index += 1
         self.blackboard.trace.append(self.env.curr_state)
-        print('action node',self.index, self.blackboard.trace[-1])
+        # print('action node',self.index, self.blackboard.trace[-1])
         if self.blackboard.trace[-1][self.action_symbol]:
             return common.Status.SUCCESS
         else:
