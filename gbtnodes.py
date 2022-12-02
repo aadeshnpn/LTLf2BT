@@ -258,18 +258,18 @@ class ActionNode(Behaviour):
         # print('action node',self.index, self.task_max, self.blackboard.trace[-1])
         if  curr_symbol_truth_value and self.index <= self.task_max:
             return common.Status.SUCCESS
-        # elif curr_symbol_truth_value == False and self.index < self.task_max:
-        #     return common.Status.RUNNING
+        elif curr_symbol_truth_value == False and self.index < self.task_max:
+            return common.Status.RUNNING
         else:
             return common.Status.FAILURE
 
 
 def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
     seletector_ppatask = Selector('lambda_ppatask')
-    post_blk = Sequence('sigma_postblk')
-    pre_blk = Sequence('sigma_preblk')
-    task_seq = Sequence('sigma_task')
-    until_seq = Sequence('sigma_until')
+    post_blk = Sequence('sigma_postblk', memory=False)
+    pre_blk = Sequence('sigma_preblk', memory=False)
+    task_seq = Sequence('sigma_task', memory=False)
+    until_seq = Sequence('sigma_until', memory=False)
     action_seq = Parallel('sigma_action')
     precond_node  = ConditionNode(precond)
     postcond_node  = ConditionNode(postcond)
