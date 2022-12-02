@@ -205,6 +205,7 @@ def main():
         # add debug statement
         # py_trees.logging.level = py_trees.logging.Level.DEBUG
         for i in range(3):
+            # print(i, env.trace[i], ppataskbt.root.status)
             ppataskbt.tick()
         print(trace_func.__name__, ppataskbt.root.status, status)
         assert ppataskbt.root.status ==status, "Failed"

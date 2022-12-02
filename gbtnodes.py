@@ -109,7 +109,7 @@ class Globally(Decorator):
         return_value = self.decorated.status
         if return_value == common.Status.FAILURE:
             self.memory = common.Status.FAILURE
-
+        # rint('globally', self.memory)
         return self.memory
 
 
@@ -220,6 +220,7 @@ class ActionNode(Behaviour):
         self.env = env
         self.planner = planner
         self.index = 0
+        self.task_max = 3
 
     def setup(self, timeout, trace=None, i=0):
         """Have defined the setup method.
@@ -253,9 +254,12 @@ class ActionNode(Behaviour):
         self.env.step()
         self.index += 1
         self.blackboard.trace.append(self.env.curr_state)
-        # print('action node',self.index, self.blackboard.trace[-1])
-        if self.blackboard.trace[-1][self.action_symbol]:
+        curr_symbol_truth_value = self.blackboard.trace[-1][self.action_symbol]
+        # print('action node',self.index, self.task_max, self.blackboard.trace[-1])
+        if  curr_symbol_truth_value and self.index <= self.task_max:
             return common.Status.SUCCESS
+        # elif curr_symbol_truth_value == False and self.index < self.task_max:
+        #     return common.Status.RUNNING
         else:
             return common.Status.FAILURE
 
@@ -266,14 +270,14 @@ def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
     pre_blk = Sequence('sigma_preblk')
     task_seq = Sequence('sigma_task')
     until_seq = Sequence('sigma_until')
-    action_seq = Sequence('sigma_action')
+    action_seq = Parallel('sigma_action')
     precond_node  = ConditionNode(precond)
     postcond_node  = ConditionNode(postcond)
     taskcnstr_node  = ConditionNode(taskcnstr)
     gblcnstr_node  = ConditionNode(gblcnstr)
     gblcnstr_decorator_1 = Globally(gblcnstr_node)
-    gblcnstr_decorator_2 = Globally(copy.copy(gblcnstr_node))
-    gblcnstr_decorator_3 = Globally(copy.copy(gblcnstr_node))
+    gblcnstr_decorator_2 = copy.copy(gblcnstr_decorator_1)
+    gblcnstr_decorator_3 = copy.copy(gblcnstr_decorator_1)
     precond_decorator = PreCond(precond_node)
     taskcnstr_decorator = TaskCnstr(taskcnstr_node)
     action_seq.add_children([action_node, gblcnstr_decorator_3])
