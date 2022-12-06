@@ -173,7 +173,8 @@ class GridMDP(MDP):
 
     def __init__(
             self, grid, terminals, init=(0, 0),
-            gamma=.9, startloc=(3, 0), seed=None):
+            gamma=.9, startloc=(3, 0), seed=None,
+            uncertainty=(0.8,0.1,0.1)):
         grid.reverse()     # because we want row 0 on bottom, not on top
         reward = {}
         states = set()
@@ -191,6 +192,7 @@ class GridMDP(MDP):
                     states.add((x, y))
                     reward[(x, y)] = grid[y][x]
         self.states = states
+        self.uncertainty = uncertainty
         actlist = orientations
         transitions = {}
         # Goal related
@@ -246,6 +248,9 @@ class GridMDP(MDP):
 
     # fp=0.95, lp=0.025, rp=0.025
     def calculate_T(self, state, action, fp=0.8, lp=0.1, rp=0.1, bp=0.0):
+        fp = self.uncertainty[0]
+        lp = self.uncertainty[1]
+        rp = self.uncertainty[2]
         if action:
             return [(fp, self.go(state, action)),
                     (rp, self.go(state, turn_right(action))),
@@ -253,23 +258,34 @@ class GridMDP(MDP):
         else:
             return [(0.0, state)]
 
+    def get_states(self):
+        # (3,3), (3,2)
+        state = {
+            'c':False, 'g':True,
+            'p': True, 't':True, 'state':self.curr_loc}
+        if self.curr_loc == (3,3):
+            state['c'] = True
+        elif self.curr_loc == (3,2):
+            state['g'] = False
+        return state
+
     def step(self, action):
         # print(self.curr_loc)
         done = False
         if self.curr_loc in self.terminals:
             done = True
             self.curr_reward = self.reward[self.curr_loc]
-            return self.curr_loc, self.curr_reward, done, None
+            return self.curr_loc, self.curr_reward, done, self.get_states()
         p, s1 = zip(*self.T(self.curr_loc, action))
         p, s1 = list(p), list(s1)
         indx = list(range(len(s1)))
         indx = self.nprandom.choice(indx, p=p)
         next_state = s1[indx]
         self.curr_loc = next_state
-        if self.startloc in self.terminals:
+        if self.curr_loc in self.terminals:
             done = True
         self.curr_reward = self.reward[next_state]
-        return self.curr_loc, self.curr_reward, done, None
+        return self.curr_loc, self.curr_reward, done, self.get_states()
 
     def T(self, state, action):
         return self.transitions[state][action] if action else [(0.0, state)]
@@ -299,18 +315,24 @@ class GridMDP(MDP):
             (-1, 0): '<', (0, -1): 'v', None: '.'}
         return self.to_grid({s: chars[a] for (s, a) in policy.items()})
 
+    def display_in_grid(self, policy):
+        array = self.to_arrows(policy)
+        print('\n'.join([''.join(['{:4}'.format(item) for item in row])
+            for row in array]))
+
+
     def qlearning(self, epoch):
         # qtable = np.zeros((len(self.states), 4))
         qtable = dict()
         for state in self.states:
             qtable[state] = dict(zip(orientations, [0, 0, 0, 0]))
         alpha = 0.1
-        gamma = 0.6
+        gamma = 0.7
         epsilon = 0.1
         # slookup = dict(zip(self.states, range(len(self.states))))
         for e in range(epoch):
             reward = 0
-            state = (3, 1)
+            state = self.startloc
             while True:
                 if random.uniform(0, 1) < epsilon:
                     action = np.random.choice([0, 1, 2, 3])
@@ -1107,17 +1129,32 @@ def policy_test(pi, mdp, k=34):
     """Return an updated utility mapping U from each state in the MDP to its
     utility, using an approximation (modified policy iteration)."""
     _, T, _ = mdp.R, mdp.T, mdp.gamma
-    s = (0, 0)
+    # s = (0, 0)
+    s = mdp.startloc
+    trace = [s]
     for i in range(k):
         p, s1 = zip(*T(s, pi[s]))
         p, s1 = list(p), list(s1)
         s1 = s1[np.argmax(p)]
         s = s1
-        if s == (9, 9):
-            return i, True
+        trace.append(s)
+        if s == (3, 3):
+            return i+1, True, trace
         if s in mdp.terminals:
-            return 0, False
-    return 0, False
+            return 0, False, trace
+    return 0, False, trace
+
+
+def policy_test_step(pi, mdp, k=34):
+    curr_loc = mdp.startloc
+    trace = [curr_loc]
+    while True:
+        curr_loc, curr_reward, done, _ = mdp.step(pi[curr_loc])
+        print(_)
+        trace.append(curr_loc)
+        if done:
+            break
+    return trace
 
 
 def policy_iteration(mdp):
