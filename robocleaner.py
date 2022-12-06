@@ -120,6 +120,7 @@ def run_experiment(reward, uncertainty, runs, maxtrace=20):
     for k in range(runs):
         # results.append(policy_test(policy, env))
         # print(policy_test_step(policy, env))
+        env.restart()
         bboard = blackboard.Client(name='gbt')
         bboard.register_key(key='trace', access=common.Access.WRITE)
         bboard.trace = [env.get_states()]
@@ -131,27 +132,50 @@ def run_experiment(reward, uncertainty, runs, maxtrace=20):
         # py_trees.logging.level = py_trees.logging.Level.DEBUG
         for i in range(maxtrace):
             ppataskbt.tick()
-            print(bboard.trace, ppataskbt.root.status)
+            # print(bboard.trace, ppataskbt.root.status)
             if ppataskbt.root.status == common.Status.SUCCESS:
                 break
-    return results
+        results.append([bboard.trace, ppataskbt.root.status])
+    return results, policy
 
 
 def experiments_parameters():
-    rewards = [(-0.04, 2, -2)]
-    uncertainties = [(0.9, 0.05, 0.05)]
-    runs = 1
+    rewards = [
+        (-0.04, 2, -2), (-0.1, 2, -2),
+        (-0.5, 2, -2), (-1, 2, -2),
+        (-0.04, 2, -2), (-0.04, 5, -2),
+        (-0.04, 10, -2), (-0.04, 1, -2),
+        (-0.04, 0.5, -2), (-0.04, 0.1, -2),
+        (-0.04, 2, -5), (-0.04, 2, -10),
+        (-0.04, 2, -1), (-0.04, 2, -0.5),
+        (-0.04, 2, -0.1), (-0.04, 5, -5),
+        (-0.04, 0.1, -0.1)
+        ]
+    uncertainties = [
+        (0.9, 0.05, 0.05), (0.95, 0.025, 0.025),
+        (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
+        (0.7, 0.15, 0.15), (0.6, 0.2, 0.2),
+        (0.5, 0.25, 0.25), (0.4, 0.3, 0.3),
+        ]
+    # rewards = [(-0.04, 2, -2)]
+    # uncertainties = [(0.9, 0.05, 0.05)]
+    runs = 512
     results = dict()
     for reward in rewards:
         results[reward] = dict()
         for uc in uncertainties:
-            results[reward][uc] = run_experiment(reward, uc, runs)
+            results[reward][uc] = dict()
+            res, policy = run_experiment(reward, uc, runs)
+            results[reward][uc]['result'] = res
+            results[reward][uc]['policy'] = policy
+
+
     with open('/tmp/mdp.pickle', 'wb') as file:
         pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # with open('/tmp/mdp.pickle', 'rb') as file:
-    #     data = pickle.load(file)
-    # print(data)
+    with open('/tmp/mdp.pickle', 'rb') as file:
+        data = pickle.load(file)
+    print('Experiment Done')
 
 
 
