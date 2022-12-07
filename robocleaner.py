@@ -143,16 +143,15 @@ def experiments_parameters():
     rewards = [
         (-0.04, 2, -2), (-0.1, 2, -2),
         (-0.5, 2, -2), (-1, 2, -2),
-        (-0.04, 2, -2), (-0.04, 5, -2),
+        (-1.5, 2, -2), (-0.04, 5, -2),
         (-0.04, 10, -2), (-0.04, 1, -2),
         (-0.04, 0.5, -2), (-0.04, 0.1, -2),
         (-0.04, 2, -5), (-0.04, 2, -10),
         (-0.04, 2, -1), (-0.04, 2, -0.5),
         (-0.04, 2, -0.1), (-0.04, 5, -5),
-        (-0.04, 0.1, -0.1)
         ]
     uncertainties = [
-        (0.9, 0.05, 0.05), (0.95, 0.025, 0.025),
+        (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
         (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
         (0.7, 0.15, 0.15), (0.6, 0.2, 0.2),
         (0.5, 0.25, 0.25), (0.4, 0.3, 0.3),
@@ -170,10 +169,10 @@ def experiments_parameters():
             results[reward][uc]['policy'] = policy
 
 
-    with open('/tmp/mdp.pickle', 'wb') as file:
+    with open('/tmp/mdp_30.pickle', 'wb') as file:
         pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    with open('/tmp/mdp.pickle', 'rb') as file:
+    with open('/tmp/mdp_30.pickle', 'rb') as file:
         data = pickle.load(file)
     print('Experiment Done')
 
