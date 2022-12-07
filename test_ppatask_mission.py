@@ -1,7 +1,11 @@
-from gbtnodes import create_PPATask_GBT,ActionNode
+from gbtnodes import (
+    create_PPATask_GBT, ActionNode, parse_ltlf,
+    replace_dummynodes_with_PPATaskBT)
+
 from py_trees import common, blackboard
 from py_trees.trees import BehaviourTree
 import py_trees
+from flloat.parser.ltlf import LTLfParser
 
 
 class Env:
@@ -180,7 +184,7 @@ def setup_environment(trace_func):
     return env
 
 
-def main():
+def ppatask():
     trace_functions = {
         get_trace_postcond_true: common.Status.SUCCESS,
         get_trace_postcond_false: common.Status.FAILURE,
@@ -209,6 +213,27 @@ def main():
             ppataskbt.tick()
         print(trace_func.__name__, ppataskbt.root.status, status)
         assert ppataskbt.root.status ==status, "Failed"
+
+
+def mission():
+    mission = '(F c) & (F h)'
+    parser = LTLfParser()
+    mission_formula = parser(mission)
+    print(mission_formula)
+    actionnodec = ActionNode('c', None, None)
+    actionnodeh = ActionNode('h', None, None)
+    mappings = {'c':actionnodec, 'h':actionnodeh}
+
+    gbt = parse_ltlf(mission_formula, mappings)
+    gbt = BehaviourTree(gbt)
+    print(py_trees.display.ascii_tree(gbt.root))
+    # print(dir(gbt.root))
+    print(py_trees.display.ascii_tree(gbt.root))
+
+
+def main():
+    # ppatask()
+    mission()
 
 
 if __name__ == "__main__":

@@ -287,3 +287,241 @@ def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
     post_blk.add_children([gblcnstr_decorator_1, postcond_node])
     seletector_ppatask.add_children([post_blk, task_seq])
     return seletector_ppatask
+
+
+# Just a simple decorator node that implements Finally mission operator
+class Finally(Decorator):
+    """Decorator node for the Finally operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Finally LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Finally, self).__init__(name=name, child=child)
+        self.idx = 0
+        self.memory = common.Status.SUCCESS
+
+    def reset(self, i=0):
+        self.memory = common.Status.SUCCESS
+
+
+    def setup(self, timeout, i=0):
+        self.decorated.setup(0, self.idx)
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Globally operator status
+        """
+        #  Repeat until logic for decorator
+        return_value = self.decorated.status
+        if return_value == common.Status.RUNNING:
+            return common.Status.RUNNING
+        elif return_value == common.Status.FAILURE:
+            # Reset all child decorator nodes and return running
+            def reset(children, i):
+                for child in children:
+                    try:
+                        child.reset(i)
+                    except AttributeError:
+                        reset(child.children, i)
+            reset(self.children, 0)
+            return common.Status.RUNNING
+        return self.memory
+
+
+# Just a simple decorator node that implements Until mission operator
+class Until(Decorator):
+    """Decorator node for the Until operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Until LTLf operator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Until, self).__init__(name=name, child=child)
+        self.idx = 0
+        self.memory = common.Status.SUCCESS
+
+    def reset(self, i=0):
+        self.memory = common.Status.SUCCESS
+
+
+    def setup(self, timeout, i=0):
+        self.decorated.setup(0, self.idx)
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Globally operator status
+        """
+        #  Repeat until logic for decorator
+        return_value = self.decorated.status
+        if self.idx ==0:
+            self.memory = return_value
+            return common.Status.SUCCESS
+        elif (self.idx >0 and self.memory == common.Status.SUCCESS):
+            pass
+        elif (self.idx >0 and self.memory == common.Status.FAILURE):
+            return common.Status.FAILURE
+        if return_value == common.Status.FAILURE:
+            self.memory = common.Status.FAILURE
+        self.idx += 1
+        return self.memory
+
+
+# Just a simple decorator node that implements Reset Decorator
+class Reset(Decorator):
+    """Decorator node for the Until operator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Reset Decorator.
+    """
+    def __init__(self, child, name=common.Name.AUTO_GENERATED, tmax=20):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(Reset, self).__init__(name=name, child=child)
+        self.idx = 0
+        self.memory = common.Status.SUCCESS
+        self.tmax = 20
+
+    def reset(self, i=0):
+        self.memory = common.Status.SUCCESS
+
+
+    def setup(self, timeout, i=0):
+        self.decorated.setup(0, self.idx)
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Globally operator status
+        """
+        #  Repeat until logic for decorator
+        return_value = self.decorated.status
+        if return_value == common.Status.SUCCESS and self.idx <= self.tmax:
+            return return_value
+        elif self.idx > self.tmax:
+            return common.Status.FAILURE
+        else:
+            return common.Status.RUNNING
+
+
+class PPATaskNode(Behaviour):
+    """Substitute node for PPATask.
+
+    Inherits the Behaviors class from py_trees.
+    """
+
+    def __init__(self, name):
+        """Init method for the condition node."""
+        super(PPATaskNode, self).__init__(name)
+        self.name = name
+        self.id = 0
+
+
+    # def setup(self, timeout, value=False):
+    def setup(self, timeout, trace, i=0):
+        """Have defined the setup method.
+
+        This method defines the other objects required for the
+        condition node.
+        Args:
+        timeout: property from Behavior super class. Not required
+        symbol: Name of the proposition symbol
+        value: A dict object with key as the proposition symbol and
+               boolean value as values. Supplied by trace.
+        """
+        self.index = i
+        self.trace = trace
+
+    def initialise(self):
+        """Everytime initialization. Not required for now."""
+        pass
+
+    def reset(self, i=0):
+        self.index = i
+
+    def increment(self):
+        self.index += 1
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        """
+        return common.Status.SUCCESS
+
+
+def parse_ltlf(formula, mappings):
+    # Just proposition
+    if isinstance(formula, LTLfAtomic):
+        # map to Dummy PPATaskNode
+        return mappings[formula.s]
+    # Unary or binary operator
+    else:
+        if (
+            isinstance(formula, LTLfEventually) or isinstance(formula, LTLfAlways)
+                or isinstance(formula, LTLfNext) or isinstance(formula, LTLfNot) ):
+            if isinstance(formula, LTLfEventually):
+                return Finally(parse_ltlf(formula.f, mappings))
+
+        elif (isinstance(formula, LTLfAnd) or isinstance(formula, LTLfOr) or isinstance(formula, LTLfUntil)):
+            if isinstance(formula, LTLfAnd):
+                leftformual, rightformula = formula.formulas
+                parll = Parallel('And')
+                leftnode = parse_ltlf(leftformual, mappings)
+                rightnode = parse_ltlf(rightformula, mappings)
+                parll.add_children([leftnode, rightnode])
+                return parll
+            elif isinstance(formula, LTLfOr):
+                leftformual, rightformula = formula.formulas
+                ornode = Selector('Or')
+                leftnode = parse_ltlf(leftformual, mappings)
+                rightnode = parse_ltlf(rightformula, mappings)
+                ornode.add_children([leftnode, rightnode])
+                # ordecorator = Or(ornode)
+                return ornode
+
+            elif isinstance(formula, LTLfUntil):
+                leftformual, rightformula = formula.formulas
+                leftnode = parse_ltlf(leftformual, mappings)
+                rightnode = parse_ltlf(rightformula, mappings)
+                useq = Sequence('UntilSeq')
+                untila = Until(leftnode, name='Until')
+                untilb = Reset(rightnode, name='Reset')
+                useq.add_children([untila, untilb])
+                return useq
+
+
+# def replace_dummynodes_with_PPATaskBT(gbt, mapping):
+#     # list all the nodes.
+#     allnodes = list(gbt.root.iterate())
+#     alldummy_nodes = list(filter(
+#         lambda x: isinstance(x, PPATaskNode), allnodes)
+#         )
+#     for node in alldummy_nodes:
+#         print(node)
+#         if node.name in mapping:
+#             parent= node.parent
+#             print(dir(parent))
+#             parent.remove
+#             parent.replace_child(node, mapping[node.name])
+#     return gbt
