@@ -1,6 +1,5 @@
 from gbtnodes import (
-    create_PPATask_GBT, ActionNode, parse_ltlf,
-    replace_dummynodes_with_PPATaskBT)
+    create_PPATask_GBT, ActionNode, parse_ltlf)
 
 from py_trees import common, blackboard
 from py_trees.trees import BehaviourTree
@@ -175,6 +174,21 @@ def get_trace_action_3_glob_false():
     return trace
 
 
+def get_trace_both_postcond_true():
+    trace = [
+        {'p': True, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h':False},
+
+        {'p': False, 'c': True, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h':True}
+    ]
+    return trace
+
+
 def setup_environment(trace_func):
     env = Env(trace_func())
     bboard = blackboard.Client(name='gbt')
@@ -216,19 +230,35 @@ def ppatask():
 
 
 def mission():
-    mission = '(F c) & (F h)'
+    # mission = '(F c) U (F h)'
+    mission = 'c U h'
     parser = LTLfParser()
     mission_formula = parser(mission)
     print(mission_formula)
-    actionnodec = ActionNode('c', None, None)
-    actionnodeh = ActionNode('h', None, None)
-    mappings = {'c':actionnodec, 'h':actionnodeh}
 
-    gbt = parse_ltlf(mission_formula, mappings)
-    gbt = BehaviourTree(gbt)
-    print(py_trees.display.ascii_tree(gbt.root))
-    # print(dir(gbt.root))
-    print(py_trees.display.ascii_tree(gbt.root))
+    trace_functions = {
+        get_trace_both_postcond_true: common.Status.SUCCESS,
+        }
+
+    for trace_func, status in trace_functions.items():
+        env = setup_environment(trace_func)
+        action_nodec = ActionNode('c', env, None)
+        action_nodeh = ActionNode('h', env, None)
+        ppataskc = create_PPATask_GBT('p','c','a','t', action_nodec)
+        ppataskh = create_PPATask_GBT('c','h','a','t', action_nodeh)
+        mappings = {'c':ppataskc, 'h':ppataskh}
+        gbt = parse_ltlf(mission_formula, mappings)
+        gbt = BehaviourTree(gbt)
+        py_trees.logging.level = py_trees.logging.Level.DEBUG
+        print(py_trees.display.ascii_tree(gbt.root))
+        for i in range(9):
+            gbt.tick()
+            print(trace_func.__name__, gbt.root.status, status)
+            if gbt.root.status == common.Status.SUCCESS:
+                break
+
+
+        assert gbt.root.status ==status, "Success"
 
 
 def main():

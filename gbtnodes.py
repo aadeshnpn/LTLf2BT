@@ -61,8 +61,8 @@ class ConditionNode(Behaviour):
         # if self.value[self.proposition_symbol]:
         # print(
         #     'proposition index',
-        #     self.name, self.index, self.proposition_symbol,
-        #     self.trace[self.index][self.proposition_symbol])
+        #     self.name, self.proposition_symbol, self.blackboard.trace[-1],
+        #     self.blackboard.trace[-1][self.proposition_symbol])
         try:
             if self.blackboard.trace[-1][self.proposition_symbol]:
                 return_value = common.Status.SUCCESS
@@ -146,6 +146,7 @@ class PreCond(Decorator):
         """
         #  Repeat until logic for decorator
         return_value = self.decorated.status
+        print(self.decorated.name, return_value, self.idx, self.memory)
         if (self.idx ==0 and return_value == common.Status.SUCCESS):
             self.memory = common.Status.SUCCESS
         elif (self.idx ==0 and return_value == common.Status.FAILURE):
@@ -220,7 +221,7 @@ class ActionNode(Behaviour):
         self.env = env
         self.planner = planner
         self.index = 0
-        self.task_max = 3
+        self.task_max = 4
 
     def setup(self, timeout, trace=None, i=0):
         """Have defined the setup method.
@@ -255,17 +256,18 @@ class ActionNode(Behaviour):
         self.index += 1
         self.blackboard.trace.append(self.env.curr_state)
         curr_symbol_truth_value = self.blackboard.trace[-1][self.action_symbol]
-        # print('action node',self.index, self.task_max, self.blackboard.trace[-1])
+        print('action node',self.name, self.index, self.task_max, self.blackboard.trace[-1])
         if  curr_symbol_truth_value and self.index <= self.task_max:
             return common.Status.SUCCESS
         elif curr_symbol_truth_value == False and self.index < self.task_max:
+            print('Inside running')
             return common.Status.RUNNING
         else:
             return common.Status.FAILURE
 
 
 def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
-    seletector_ppatask = Selector('lambda_ppatask')
+    seletector_ppatask = Selector('lambda_ppatask', memory=False)
     post_blk = Sequence('sigma_postblk', memory=False)
     pre_blk = Sequence('sigma_preblk', memory=False)
     task_seq = Sequence('sigma_task', memory=False)
@@ -370,6 +372,10 @@ class Until(Decorator):
         """
         #  Repeat until logic for decorator
         return_value = self.decorated.status
+        if self.decorated.status == common.Status.RUNNING:
+            return self.decorated.status
+        else:
+            self.idx += 1
         if self.idx ==0:
             self.memory = return_value
             return common.Status.SUCCESS
@@ -401,7 +407,7 @@ class Reset(Decorator):
         super(Reset, self).__init__(name=name, child=child)
         self.idx = 0
         self.memory = common.Status.SUCCESS
-        self.tmax = 20
+        self.tmax = tmax
 
     def reset(self, i=0):
         self.memory = common.Status.SUCCESS
@@ -417,6 +423,7 @@ class Reset(Decorator):
         """
         #  Repeat until logic for decorator
         return_value = self.decorated.status
+        self.idx += 1
         if return_value == common.Status.SUCCESS and self.idx <= self.tmax:
             return return_value
         elif self.idx > self.tmax:
@@ -493,7 +500,7 @@ def parse_ltlf(formula, mappings):
                 return parll
             elif isinstance(formula, LTLfOr):
                 leftformual, rightformula = formula.formulas
-                ornode = Selector('Or')
+                ornode = Selector('Or', memory=False)
                 leftnode = parse_ltlf(leftformual, mappings)
                 rightnode = parse_ltlf(rightformula, mappings)
                 ornode.add_children([leftnode, rightnode])
@@ -504,9 +511,9 @@ def parse_ltlf(formula, mappings):
                 leftformual, rightformula = formula.formulas
                 leftnode = parse_ltlf(leftformual, mappings)
                 rightnode = parse_ltlf(rightformula, mappings)
-                useq = Sequence('UntilSeq')
+                useq = Sequence('UntilSeq', memory=False)
                 untila = Until(leftnode, name='Until')
-                untilb = Reset(rightnode, name='Reset')
+                untilb = Reset(rightnode, name='Reset', tmax=4)
                 useq.add_children([untila, untilb])
                 return useq
 
