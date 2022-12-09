@@ -212,8 +212,11 @@ def ppatask():
         get_trace_action_3_false: common.Status.FAILURE,
         get_trace_action_3_glob_false: common.Status.FAILURE,
         }
-
-
+    real_ltl = [True, False, False, True, False, False, False, True, True, False, False]
+    formula = '(G (d) & b) | ((G(d) & a) & (c U (b & G(d))))'
+    parser = LTLfParser()
+    task_formula = parser(formula)
+    j = 0
     for trace_func,status in trace_functions.items():
         env = setup_environment(trace_func)
         action_node = ActionNode('b', env)
@@ -227,6 +230,8 @@ def ppatask():
             ppataskbt.tick()
         print(trace_func.__name__, ppataskbt.root.status, status)
         assert ppataskbt.root.status ==status, "Failed"
+        assert task_formula.truth(trace_func(), 0) == real_ltl[j], "Failed Real LTL Parser"
+        j += 1
 
 
 def mission():
@@ -249,21 +254,20 @@ def mission():
         mappings = {'c':ppataskc, 'h':ppataskh}
         gbt = parse_ltlf(mission_formula, mappings)
         gbt = BehaviourTree(gbt)
-        py_trees.logging.level = py_trees.logging.Level.DEBUG
+        # py_trees.logging.level = py_trees.logging.Level.DEBUG
         print(py_trees.display.ascii_tree(gbt.root))
-        for i in range(9):
+        for i in range(8):
             gbt.tick()
             print(trace_func.__name__, gbt.root.status, status)
             if gbt.root.status == common.Status.SUCCESS:
                 break
 
-
         assert gbt.root.status ==status, "Success"
 
 
 def main():
-    # ppatask()
-    mission()
+    ppatask()
+    # mission()
 
 
 if __name__ == "__main__":
