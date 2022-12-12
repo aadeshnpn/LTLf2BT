@@ -212,7 +212,7 @@ class ActionNode(Behaviour):
     behavior implements the action node for the planning LTLf propositions.
     """
 
-    def __init__(self, name, env, planner=None):
+    def __init__(self, name, env, planner=None, task_max=3):
         """Init method for the action node."""
         super(ActionNode, self).__init__('Action'+name)
         self.action_symbol = name
@@ -221,7 +221,7 @@ class ActionNode(Behaviour):
         self.env = env
         self.planner = planner
         self.index = 0
-        self.task_max = 3
+        self.task_max = task_max
 
     def setup(self, timeout, trace=None, i=0):
         """Have defined the setup method.
@@ -298,7 +298,7 @@ class Finally(Decorator):
     Inherits the Decorator class from py_trees. This
     behavior implements the Finally LTLf operator.
     """
-    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+    def __init__(self, child, name=common.Name.AUTO_GENERATED, task_max=4):
         """
         Init with the decorated child.
 
@@ -309,6 +309,7 @@ class Finally(Decorator):
         super(Finally, self).__init__(name=name, child=child)
         self.idx = 0
         self.memory = common.Status.SUCCESS
+        self.task_max = task_max
 
     def reset(self, i=0):
         self.memory = common.Status.SUCCESS
@@ -324,6 +325,7 @@ class Finally(Decorator):
         """
         #  Repeat until logic for decorator
         return_value = self.decorated.status
+        self.idx += 1
         if return_value == common.Status.RUNNING:
             return common.Status.RUNNING
         elif return_value == common.Status.FAILURE:
@@ -335,6 +337,8 @@ class Finally(Decorator):
                     except AttributeError:
                         reset(child.children, i)
             reset(self.children, 0)
+            if self.idx > self.task_max:
+                return common.Status.FAILURE
             return common.Status.RUNNING
         return self.memory
 
@@ -477,7 +481,7 @@ class PPATaskNode(Behaviour):
         return common.Status.SUCCESS
 
 
-def parse_ltlf(formula, mappings):
+def parse_ltlf(formula, mappings, task_max=4):
     # Just proposition
     if isinstance(formula, LTLfAtomic):
         # map to Dummy PPATaskNode
@@ -488,7 +492,7 @@ def parse_ltlf(formula, mappings):
             isinstance(formula, LTLfEventually) or isinstance(formula, LTLfAlways)
                 or isinstance(formula, LTLfNext) or isinstance(formula, LTLfNot) ):
             if isinstance(formula, LTLfEventually):
-                return Finally(parse_ltlf(formula.f, mappings))
+                return Finally(parse_ltlf(formula.f, mappings), task_max=task_max)
 
         elif (isinstance(formula, LTLfAnd) or isinstance(formula, LTLfOr) or isinstance(formula, LTLfUntil)):
             if isinstance(formula, LTLfAnd):

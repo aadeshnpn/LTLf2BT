@@ -189,6 +189,51 @@ def get_trace_both_postcond_true():
     return trace
 
 
+def get_trace_home_postcond_false():
+    trace = [
+        {'p': True, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h':False},
+
+        {'p': False, 'c': True, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h':False}
+    ]
+    return trace
+
+
+def get_trace_cheese_postcond_false():
+    trace = [
+        {'p': True, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h':False},
+
+        {'p': False, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h':False}
+    ]
+    return trace
+
+
+def get_trace_cheese_precondition_true():
+    trace = [
+        {'p': True, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': False, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h':False},
+
+        {'p': False, 'c': True, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h': False},
+        {'p': False, 'c': True, 'a': True, 't': True, 'h': True}
+    ]
+    return trace
+
+
 def setup_environment(trace_func):
     env = Env(trace_func())
     bboard = blackboard.Client(name='gbt')
@@ -212,14 +257,14 @@ def ppatask():
         get_trace_action_3_false: common.Status.FAILURE,
         get_trace_action_3_glob_false: common.Status.FAILURE,
         }
-    real_ltl = [True, False, False, True, False, False, False, True, True, False, False]
+    real_ltl_truth_value = [True, False, False, True, False, False, False, True, True, False, False]
     formula = '(G (d) & b) | ((G(d) & a) & (c U (b & G(d))))'
     parser = LTLfParser()
     task_formula = parser(formula)
     j = 0
     for trace_func,status in trace_functions.items():
         env = setup_environment(trace_func)
-        action_node = ActionNode('b', env)
+        action_node = ActionNode('b', env, task_max=3)
         ppataskbt = create_PPATask_GBT('a', 'b', 'c', 'd', action_node)
         ppataskbt = BehaviourTree(ppataskbt)
         # print(py_trees.display.ascii_tree(ppataskbt.root))
@@ -230,44 +275,65 @@ def ppatask():
             ppataskbt.tick()
         print(trace_func.__name__, ppataskbt.root.status, status)
         assert ppataskbt.root.status ==status, "Failed"
-        assert task_formula.truth(trace_func(), 0) == real_ltl[j], "Failed Real LTL Parser"
+        assert task_formula.truth(
+            trace_func(), 0) == real_ltl_truth_value[j], "Failed Real LTL Parser"
         j += 1
 
 
 def mission():
     # mission = '(F c) U (F h)'
-    mission = 'c U h'
+    mission = '(F (c)) U (F (h))'
+    chess_task = '(G (t) & c) | ((G(t) & p) & (a U (c & G(t))))'
+    parser = LTLfParser()
+    cheese_formula = parser(chess_task)
+    home_task = '(G (t) & h) | ((G(t) & c) & (a U (h & G(t))))'
+    # home_task_finally = 'F (G (t) & h) | ((G(t) & c) & (a U (h & G(t))))'
+    home_formula = parser(home_task)
+    mission_in_ppatask = '(F(' +chess_task + ')) U (F(' + home_task + '))'
     parser = LTLfParser()
     mission_formula = parser(mission)
-    print(mission_formula)
+    mparser = LTLfParser()
+    mission_formula_ppa = mparser(mission_in_ppatask)
+    # print(mission_formula_ppa)
 
     trace_functions = {
         get_trace_both_postcond_true: common.Status.SUCCESS,
+        get_trace_home_postcond_false: common.Status.FAILURE,
+        get_trace_cheese_postcond_false: common.Status.FAILURE,
+        get_trace_cheese_precondition_true: common.Status.SUCCESS
         }
 
+    real_ltl_truth_value =[True, False, False, True]
+
+    j = 0
     for trace_func, status in trace_functions.items():
         env = setup_environment(trace_func)
-        action_nodec = ActionNode('c', env, None)
-        action_nodeh = ActionNode('h', env, None)
+        action_nodec = ActionNode('c', env, None, task_max=4)
+        action_nodeh = ActionNode('h', env, None, task_max=4)
         ppataskc = create_PPATask_GBT('p','c','a','t', action_nodec)
         ppataskh = create_PPATask_GBT('c','h','a','t', action_nodeh)
         mappings = {'c':ppataskc, 'h':ppataskh}
         gbt = parse_ltlf(mission_formula, mappings)
         gbt = BehaviourTree(gbt)
         # py_trees.logging.level = py_trees.logging.Level.DEBUG
-        print(py_trees.display.ascii_tree(gbt.root))
+        # print(py_trees.display.ascii_tree(gbt.root))
         for i in range(8):
             gbt.tick()
-            print(trace_func.__name__, gbt.root.status, status)
+            # print(trace_func.__name__, gbt.root.status, status)
             if gbt.root.status == common.Status.SUCCESS:
                 break
-
-        assert gbt.root.status ==status, "Success"
+        print(trace_func.__name__, gbt.root.status, status)
+        assert gbt.root.status ==status, "Failed"
+        # print(trace_func())
+        assert mission_formula_ppa.truth(trace_func(), 0) == real_ltl_truth_value[j], "Failed"
+        # assert cheese_formula.truth(trace_func(), 0) == real_ltl_truth_value[j], "Failed"
+        # assert home_formula.truth(trace_func(), 3) == real_ltl_truth_value[j], "Failed"
+        j += 1
 
 
 def main():
-    ppatask()
-    # mission()
+    # ppatask()
+    mission()
 
 
 if __name__ == "__main__":
