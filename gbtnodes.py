@@ -498,26 +498,26 @@ def parse_ltlf(formula, mappings, task_max=4):
             if isinstance(formula, LTLfAnd):
                 leftformual, rightformula = formula.formulas
                 parll = Parallel('And')
-                leftnode = parse_ltlf(leftformual, mappings)
-                rightnode = parse_ltlf(rightformula, mappings)
+                leftnode = parse_ltlf(leftformual, mappings, task_max=task_max)
+                rightnode = parse_ltlf(rightformula, mappings, task_max=task_max)
                 parll.add_children([leftnode, rightnode])
                 return parll
             elif isinstance(formula, LTLfOr):
                 leftformual, rightformula = formula.formulas
                 ornode = Selector('Or', memory=False)
-                leftnode = parse_ltlf(leftformual, mappings)
-                rightnode = parse_ltlf(rightformula, mappings)
+                leftnode = parse_ltlf(leftformual, mappings, task_max=task_max)
+                rightnode = parse_ltlf(rightformula, mappings, task_max=task_max)
                 ornode.add_children([leftnode, rightnode])
                 # ordecorator = Or(ornode)
                 return ornode
 
             elif isinstance(formula, LTLfUntil):
                 leftformual, rightformula = formula.formulas
-                leftnode = parse_ltlf(leftformual, mappings)
-                rightnode = parse_ltlf(rightformula, mappings)
+                leftnode = parse_ltlf(leftformual, mappings, task_max=task_max)
+                rightnode = parse_ltlf(rightformula, mappings, task_max=task_max)
                 useq = Sequence('UntilSeq', memory=False)
                 untila = Until(leftnode, name='Until')
-                untilb = Reset(rightnode, name='Reset', tmax=4)
+                untilb = Reset(rightnode, name='Reset', tmax=task_max)
                 useq.add_children([untila, untilb])
                 return useq
 

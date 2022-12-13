@@ -199,6 +199,7 @@ class GridMDP(MDP):
         # self.goalspec = goalspec
         self.startloc = startloc
         self.curr_loc = self.startloc
+        self.cheese_memory = False
 
         if len(terminals) >= 2:
             self.cheese = terminals[0]
@@ -262,11 +263,18 @@ class GridMDP(MDP):
         # (3,3), (3,2)
         state = {
             'c':False, 'g':True,
-            'p': True, 't':True, 'state':self.curr_loc}
+            'p': True, 't':True, 'h':False,
+            'state':self.curr_loc}
         if self.curr_loc == (3,3):
             state['c'] = True
+            self.cheese_memory = True
         elif self.curr_loc == (3,2):
             state['g'] = False
+        elif self.curr_loc == (3,0):
+            state['h'] = True
+        # Remember once cheese is picked
+        if self.cheese_memory:
+            state['c'] = True
         return state
 
     def step(self, action):
@@ -279,6 +287,7 @@ class GridMDP(MDP):
         p, s1 = zip(*self.T(self.curr_loc, action))
         p, s1 = list(p), list(s1)
         indx = list(range(len(s1)))
+        # print(action, p, s1, self.curr_loc)
         indx = self.nprandom.choice(indx, p=p)
         next_state = s1[indx]
         self.curr_loc = next_state
@@ -306,6 +315,7 @@ class GridMDP(MDP):
     def restart(self):
         self.curr_loc = self.startloc
         self.curr_reward = self.reward[self.startloc]
+        self.cheese_memory = False
 
     def to_arrows(self, policy):
         # EAST, NORTH, WEST, SOUTH = [(1, 0), (0, 1), (-1, 0), (0, -1)]
