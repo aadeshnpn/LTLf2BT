@@ -189,7 +189,7 @@ def init_mdp_mission(
     return mdp
 
 
-def run_experiment(reward, uncertainty, runs, maxtrace=25):
+def run_experiment(reward, uncertainty, runs, maxtrace=30):
     env = init_mdp_mission(reward=reward, uncertainty=uncertainty)
     # policy = policy_iteration(env)
     # env.display_in_grid(policy)
@@ -224,7 +224,7 @@ def run_experiment(reward, uncertainty, runs, maxtrace=25):
             if gbt.root.status == common.Status.SUCCESS:
                 break
         results.append([bboard.trace, gbt.root.status])
-    return results
+    return results, (policy_cheese, policy_home)
 
 
 def experiments_parameters():
@@ -244,26 +244,24 @@ def experiments_parameters():
         (0.7, 0.15, 0.15), (0.6, 0.2, 0.2),
         (0.5, 0.25, 0.25), (0.4, 0.3, 0.3),
         ]
-    rewards = [(-0.04, 2, -2)]
-    uncertainties = [(0.9, 0.05, 0.05)]
+    # rewards = [(-0.04, 2, -2)]
+    # uncertainties = [(0.9, 0.05, 0.05)]
     runs = 512
     results = dict()
     for reward in rewards:
         results[reward] = dict()
         for uc in uncertainties:
             results[reward][uc] = dict()
-            res = run_experiment(reward, uc, runs)
+            res, policies = run_experiment(reward, uc, runs)
             results[reward][uc]['result'] = res
-            # results[reward][uc]['policy'] = policy
-
-
+            results[reward][uc]['policy'] = policies
+        print(reward)
     with open('/tmp/mdp_cheese_home.pickle', 'wb') as file:
         pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
 
     with open('/tmp/mdp_cheese_home.pickle', 'rb') as file:
         data = pickle.load(file)
-    print('Experiment Done')
-
+    print('Experiment Done', len(data))
 
 
 def main():
@@ -271,7 +269,6 @@ def main():
     # reward = (-0.04, 2, -2)
     # uncertainties = (0.9, 0.05, 0.05)
     # run_experiment(reward, uncertainties, 1)
-
 
 
 if __name__ =='__main__':
