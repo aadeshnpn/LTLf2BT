@@ -266,6 +266,66 @@ class ActionNode(Behaviour):
             return common.Status.FAILURE
 
 
+class LearnerRootNode(Decorator):
+    """Learner Decorator node for the aggreating trace results.
+
+    Inherits the Decorator class from py_trees. This
+    decorator implements the learning of policy when
+    the trace is failure or success.
+    """
+
+    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+        """Init method for the action node."""
+        super(LearnerRootNode, self).__init__(name=name, child=child)
+        self.action_symbol = name
+        self.blackboard = blackboard.Client(name='gbt')
+        self.blackboard.register_key(key='trace', access=common.Access.WRITE)
+        self.index = 0
+
+    def setup(self, timeout, trace=None, i=0):
+        """Have defined the setup method.
+
+        This method defines the other objects required for the
+        condition node.
+        Args:
+        timeout: property from Behavior super class. Not required
+        symbol: Name of the proposition symbol
+        value: A dict object with key as the proposition symbol and
+               boolean value as values. Supplied by trace.
+        """
+        self.index = i
+
+    def initialise(self):
+        """Everytime initialization. Not required for now."""
+        pass
+
+    def reset(self, i=0):
+        self.index = i
+
+    def increment(self):
+        self.index += 1
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        """
+        # Plan action and take that action in the environment.
+        # print('action node',self.index, self.blackboard.trace[-1])
+        # If return success,
+        #  ->update the policy for all the state in the trace with
+        #   positive rewards.
+        # If return failure,
+        # -> update the policy for all the state in the trace with
+        #   negative rewards.
+        child_status = self.decorated.status
+        if child_status == common.Status.SUCCESS:
+            pass
+        elif child_status == common.Status.FAILURE:
+            pass
+
+        return child_status
+
+
 def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
     seletector_ppatask = Selector('lambda_ppatask', memory=False)
     post_blk = Sequence('sigma_postblk', memory=False)
@@ -289,6 +349,14 @@ def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
     post_blk.add_children([gblcnstr_decorator_1, postcond_node])
     seletector_ppatask.add_children([post_blk, task_seq])
     return seletector_ppatask
+
+
+def create_PPATask_GBT_learn(
+        precond, postcond, taskcnstr, gblcnstr, action_node):
+    ppatask = create_PPATask_GBT(
+        precond, postcond, taskcnstr, gblcnstr, action_node)
+    learner = LearnerRootNode(ppatask)
+    return learner
 
 
 # Just a simple decorator node that implements Finally mission operator

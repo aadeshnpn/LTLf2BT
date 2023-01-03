@@ -67,11 +67,11 @@ def plot_data_reward_eff(trace_len, ax_eff, i):
     ax_eff.set_title(rewards[i])
 
 
-def get_data_mdp_reward_uncertainty():
+def get_data_mdp_reward_uncertainty(filename='/tmp/mdp_30.pickle'):
     fig_power = plt.figure(figsize=(14, 8), dpi=100)
     fig_eff = plt.figure(figsize=(10, 6), dpi=100)
 
-    with open('/tmp/mdp_30.pickle', 'rb') as file:
+    with open(filename, 'rb') as file:
         data = pickle.load(file)
     i = 0
     info = dict()
@@ -98,7 +98,7 @@ def get_data_mdp_reward_uncertainty():
     return info
 
 
-def plot_mdp_power(info):
+def plot_mdp_power(info, fname='mpd_power_30'):
     i=0
     fig_power = plt.figure(figsize=(14, 8), dpi=100)
     for reward in info.keys():
@@ -109,7 +109,7 @@ def plot_mdp_power(info):
     plt.tight_layout(pad=0.5)
 
     maindir = '/tmp/'
-    fname = 'mpd_power_30'
+    # fname = 'mpd_power_30'
 
     fig_power.savefig(
         maindir + '/' + fname + '.png')
@@ -117,7 +117,7 @@ def plot_mdp_power(info):
     plt.close(fig_power)
 
 
-def plot_mdp_eff(info):
+def plot_mdp_eff(info, fname='mdp_efficiency_30'):
     i=0
     fig_eff = plt.figure(figsize=(14, 8), dpi=100)
     for reward in info.keys():
@@ -126,16 +126,16 @@ def plot_mdp_eff(info):
         i += 1
     plt.tight_layout(pad=0.5)
     maindir = '/tmp/'
-    fname = 'mpd_efficiency_30'
+    # fname = 'mpd_efficiency_30'
     fig_eff.savefig(
         maindir + '/' + fname + '.png')
     plt.close(fig_eff)
 
 
 def main():
-    info = get_data_mdp_reward_uncertainty()
-    plot_mdp_power(info)
-    plot_mdp_eff(info)
+    info = get_data_mdp_reward_uncertainty(filename='/tmp/mdp_cheese_home.pickle')
+    plot_mdp_power(info,'cheese_power')
+    plot_mdp_eff(info, 'cheese_efficiency')
 
 
 if __name__ =='__main__':
