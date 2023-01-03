@@ -274,13 +274,14 @@ class LearnerRootNode(Decorator):
     the trace is failure or success.
     """
 
-    def __init__(self, child, name=common.Name.AUTO_GENERATED):
+    def __init__(self, child, name=common.Name.AUTO_GENERATED, policy=None):
         """Init method for the action node."""
         super(LearnerRootNode, self).__init__(name=name, child=child)
         self.action_symbol = name
         self.blackboard = blackboard.Client(name='gbt')
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
         self.index = 0
+        self.policy = policy
 
     def setup(self, timeout, trace=None, i=0):
         """Have defined the setup method.
@@ -318,6 +319,39 @@ class LearnerRootNode(Decorator):
         # -> update the policy for all the state in the trace with
         #   negative rewards.
         child_status = self.decorated.status
+        if child_status == common.Status.RUNNING:
+            pass
+        else:
+            tracea = []
+            traces = [state['state'] for state in self.blackboard.trace]
+            for state in self.blackboard.trace:
+                if state.get('action', None) is not None:
+                    tracea.append(state['action'])
+        # psi = 0.9
+        # j = 1
+        # for i in range(0, len(traces[0])-1, 1):
+        #     a = tracea[i]
+        #     tempvals = [t[i+1] for t in traces]
+        #     ss = self.gtable_key(tempvals)
+        #     try:
+        #         prob = self.gtable[ss][a]
+        #     except KeyError:
+        #         self.create_gtable_indv(self.gtable_key(ss))
+        #         prob = self.gtable[ss][a]
+
+        #     Psi = pow(psi, j)
+        #     j += 1
+        #     if result is False:
+        #         new_prob = prob - (Psi * prob)
+        #     else:
+        #         new_prob = prob + (Psi * prob)
+
+        #     self.gtable[ss][a] = new_prob
+        #     probs = np.array(list(self.gtable[ss].values()))
+        #     probs = probs / probs.sum()
+
+        #     self.gtable[ss] = dict(zip(self.gtable[ss].keys(), probs))
+
         if child_status == common.Status.SUCCESS:
             pass
         elif child_status == common.Status.FAILURE:

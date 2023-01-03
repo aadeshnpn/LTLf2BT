@@ -1187,3 +1187,10 @@ def policy_iteration(mdp):
         # return {
         #     's33': props['s33'], 's32': props['s32'],
         #     home: props[home]}
+
+
+def random_policy(mdp):
+    """Solve an MDP by policy iteration"""
+    U = {s: 0 for s in mdp.states}
+    pi = {s: random.choice(mdp.actions(s)) for s in mdp.states}
+    return pi
