@@ -274,7 +274,9 @@ class LearnerRootNode(Decorator):
     the trace is failure or success.
     """
 
-    def __init__(self, child, name=common.Name.AUTO_GENERATED, policy=None):
+    def __init__(
+            self, child, name=common.Name.AUTO_GENERATED,
+            policy=None, discount=0.9):
         """Init method for the action node."""
         super(LearnerRootNode, self).__init__(name=name, child=child)
         self.action_symbol = name
@@ -282,6 +284,7 @@ class LearnerRootNode(Decorator):
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
         self.index = 0
         self.gtable = policy
+        self.psi = discount
 
     def setup(self, timeout, trace=None, i=0):
         """Have defined the setup method.
@@ -331,14 +334,14 @@ class LearnerRootNode(Decorator):
                     tracea.append(state['action'])
             tracea = tracea[::-1]
             traces = traces[::-1]
-            psi = 0.9
+            # psi = 0.9
             j = 1
             for i in range(0, len(traces[0])-1, 1):
                 a = tracea[i]
                 ss = traces[i+1]
                 # print(self.gtable)
                 prob = self.gtable[ss][a]
-                Psi = pow(psi, j)
+                Psi = pow(self.psi, j)
                 j += 1
                 if child_status == common.Status.FAILURE:
                     # temp_state = self.blackboard.trace[i+1]
@@ -389,7 +392,8 @@ def create_PPATask_GBT_learn(
         precond, postcond, taskcnstr, gblcnstr, action_node):
     ppatask = create_PPATask_GBT(
         precond, postcond, taskcnstr, gblcnstr, action_node)
-    learner = LearnerRootNode(ppatask, policy=action_node.gtable)
+    learner = LearnerRootNode(
+        ppatask, policy=action_node.gtable, discount=action_node.discount)
     return learner
 
 
