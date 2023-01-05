@@ -214,13 +214,13 @@ def experiments_parameters():
     tracelens = [10, 15, 20, 25, 30, 40, 50]
     propsteps = [10, 15, 20, 25, 30, 40, 50]
 
-    uncertainties = [(0.95, 0.025, 0.025)]
-    discounts = [0.9]
-    rewards = [(-0.04, 2, -2)]
-    tracelens = [30]
-    propsteps = [50]
+    # uncertainties = [(0.95, 0.025, 0.025)]
+    # discounts = [0.9]
+    # rewards = [(-0.04, 2, -2)]
+    # tracelens = [30]
+    # propsteps = [50]
 
-    runs = 2
+    runs = 50
     results = dict()
     j = 0
     for discount in discounts:
