@@ -19,17 +19,25 @@ class MDPActionNode(Behaviour):
     behavior implements the action node for the planning LTLf propositions.
     """
 
-    def __init__(self, name, env, planner=None, max_task=20):
+    def __init__(
+            self, name, env, planner=None, max_task=20,
+            actions=[0, 1, 2, 3], seed=None):
         """Init method for the action node."""
         super(MDPActionNode, self).__init__('Action'+name)
         self.action_symbol = name
         self.blackboard = blackboard.Client(name='gbt')
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
         self.env = env
-        self.planner = planner
+        self.gtable = planner
         self.index = 0
         self.task_max = max_task
         self.curr_loc = env.curr_loc
+        self.actionsidx = actions
+        if seed is None:
+            self.nprandom = np.random.RandomState()   # pylint: disable=E1101
+        else:
+            self.nprandom = np.random.RandomState(    # pylint: disable=E1101
+                seed)
 
     def setup(self, timeout, trace=None, i=0):
         """Have defined the setup method.
@@ -54,6 +62,28 @@ class MDPActionNode(Behaviour):
     def increment(self):
         self.index += 1
 
+    def create_gtable_indv(self, state):
+        p = np.ones(len(self.actionsidx), dtype=np.float64)
+        p = p / (len(self.actionsidx) * 1.0)
+
+        self.gtable[state] = dict(
+                        zip(self.actionsidx, p))
+
+    def get_action(self, state):
+        return self.nprandom.choice(
+            self.actionsidx,
+            p=list(self.gtable[state].values())
+            )
+
+    def env_action_dict(self, action):
+        action_dict = {
+            0: (1, 0),
+            1: (0, 1),
+            2: (-1, 0),
+            3: (0, -1)
+        }
+        return action_dict[action]
+
     def update(self):
         """
         Main function that is called when BT ticks.
@@ -68,9 +98,15 @@ class MDPActionNode(Behaviour):
         #         break
         # return trace
         # print('Planner', self.planner)
-        curr_loc, curr_reward, done, state = self.env.step(self.planner[self.curr_loc])
+        state = self.curr_loc
+        if self.gtable.get(state, None) is None:
+            self.create_gtable_indv(state)
+        action = self.get_action(state)
+
+        curr_loc, curr_reward, done, state = self.env.step(
+            self.env_action_dict(action))
         self.index += 1
-        self.blackboard.trace[-1]['action'] = self.planner[self.curr_loc]
+        self.blackboard.trace[-1]['action'] = action
         # print('action node',self.index, self.task_max, self.blackboard.trace[-1])
         self.blackboard.trace.append(state)
         self.curr_loc = curr_loc
@@ -113,10 +149,11 @@ def init_mdp(
     return mdp
 
 
-def run_experiment(reward, uncertainty, runs, maxtrace=20):
+def run_experiment(reward, uncertainty, runs, maxtrace=30):
     env = init_mdp(reward=reward, uncertainty=uncertainty)
-    policy = policy_iteration(env)
+    # policy = policy_iteration(env)
     # policy = random_policy()
+    policy = dict()
     # env.display_in_grid(policy)
     results = []
     for k in range(runs):
@@ -126,6 +163,7 @@ def run_experiment(reward, uncertainty, runs, maxtrace=20):
         bboard = blackboard.Client(name='gbt')
         bboard.register_key(key='trace', access=common.Access.WRITE)
         bboard.trace = [env.get_states()]
+        print(k, policy)
         policynode = MDPActionNode('c', env, policy, maxtrace)
         ppataskbt = create_PPATask_GBT_learn('p', 'c', 't', 'g', policynode)
         ppataskbt = BehaviourTree(ppataskbt)
@@ -138,7 +176,8 @@ def run_experiment(reward, uncertainty, runs, maxtrace=20):
             if ppataskbt.root.status == common.Status.SUCCESS:
                 break
         results.append([bboard.trace, ppataskbt.root.status])
-    # print(bboard.trace)
+    print(k, [state['state'] for state in bboard.trace])
+
     return results, policy
 
 
@@ -160,8 +199,8 @@ def experiments_parameters():
         (0.5, 0.25, 0.25), (0.4, 0.3, 0.3),
         ]
     discounts = [(-0.04, 2, -2)]
-    uncertainties = [(0.9, 0.05, 0.05)]
-    runs = 1
+    uncertainties = [(0.95, 0.025, 0.025)]
+    runs = 25
     results = dict()
     for discount in discounts:
         results[discount] = dict()
