@@ -163,7 +163,7 @@ def run_experiment(reward, uncertainty, runs, maxtrace=30):
         bboard = blackboard.Client(name='gbt')
         bboard.register_key(key='trace', access=common.Access.WRITE)
         bboard.trace = [env.get_states()]
-        print(k, policy)
+        # print(k, policy)
         policynode = MDPActionNode('c', env, policy, maxtrace)
         ppataskbt = create_PPATask_GBT_learn('p', 'c', 't', 'g', policynode)
         ppataskbt = BehaviourTree(ppataskbt)
@@ -173,7 +173,9 @@ def run_experiment(reward, uncertainty, runs, maxtrace=30):
         for i in range(maxtrace):
             ppataskbt.tick()
             # print(bboard.trace, ppataskbt.root.status)
-            if ppataskbt.root.status == common.Status.SUCCESS:
+            if (
+                (ppataskbt.root.status == common.Status.SUCCESS) or
+                    (ppataskbt.root.status == common.Status.FAILURE)):
                 break
         results.append([bboard.trace, ppataskbt.root.status])
     print(k, [state['state'] for state in bboard.trace])
@@ -200,7 +202,7 @@ def experiments_parameters():
         ]
     discounts = [(-0.04, 2, -2)]
     uncertainties = [(0.95, 0.025, 0.025)]
-    runs = 25
+    runs = 50
     results = dict()
     for discount in discounts:
         results[discount] = dict()

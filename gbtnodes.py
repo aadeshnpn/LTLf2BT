@@ -323,6 +323,7 @@ class LearnerRootNode(Decorator):
             # print(child_status, self.blackboard.trace)
             pass
         else:
+            # print('from propagation step', self.gtable)
             tracea = []
             traces = [state['state'] for state in self.blackboard.trace]
             for state in self.blackboard.trace:
@@ -341,7 +342,7 @@ class LearnerRootNode(Decorator):
                 j += 1
                 if child_status == common.Status.FAILURE:
                     # temp_state = self.blackboard.trace[i+1]
-                    # print(child_status, temp_state)
+                    # # print(child_status, temp_state)
                     # if temp_state['t'] is False or temp_state['g'] is False or temp_state['p'] is False:
                     #     new_prob = prob - (Psi * prob)
                     # else:
@@ -355,7 +356,7 @@ class LearnerRootNode(Decorator):
                 probs = probs / probs.sum()
 
                 self.gtable[ss] = dict(zip(self.gtable[ss].keys(), probs))
-
+            # print('after propagation', self.gtable)
         return child_status
 
 
