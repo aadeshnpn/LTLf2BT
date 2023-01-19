@@ -28,7 +28,7 @@ def plot_data_reward_power(success_prob, ax_power, i):
         ]
     xrange = range(1, 9)
     # print('plot',success_prob)
-    ax_power.scatter(xrange, success_prob, alpha=0.5, s=5, marker="x")
+    ax_power.scatter(xrange, success_prob, alpha=0.5, s=40, marker="x")
     if i ==0:
         ax_power.set_ylabel('Success Probability')
         ax_power.set_xlabel('Uncertainty')
@@ -134,8 +134,8 @@ def plot_mdp_eff(info, fname='mdp_efficiency_30'):
 
 def main():
     info = get_data_mdp_reward_uncertainty(filename='/tmp/mdp_cheese_home.pickle')
-    plot_mdp_power(info,'cheese_power')
-    plot_mdp_eff(info, 'cheese_efficiency')
+    plot_mdp_power(info,'cheese_home_power')
+    plot_mdp_eff(info, 'cheese_home_efficiency')
 
 
 if __name__ =='__main__':

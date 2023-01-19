@@ -1,9 +1,8 @@
-from inspect import trace
 from mdp import (
     GridMDP, create_policy,
     policy_iteration, policy_test,
     policy_test_step, random_policy)
-from gbtnodes import create_PPATask_GBT_learn
+from gbtnodes import create_PPATask_GBT_learn, parse_ltlf
 
 from py_trees import common, blackboard
 from py_trees.trees import BehaviourTree
@@ -11,6 +10,7 @@ from py_trees.behaviour import Behaviour
 import py_trees
 import numpy as np
 import pickle
+from flloat.parser.ltlf import LTLfParser
 
 
 class MDPActionNode(Behaviour):
@@ -144,7 +144,7 @@ def init_mdp(
     grid[1][3] = reward[2]
 
     mdp = GridMDP(
-        grid, terminals=[(3,3), (3,2)], startloc=sloc,
+        grid, terminals=[], startloc=sloc,
         uncertainty=uncertainty
         )
 
@@ -157,11 +157,16 @@ def run_experiment(
     env = init_mdp(reward=reward, uncertainty=uncertainty)
     # policy = policy_iteration(env)
     # policy = random_policy()
-    policy = dict()
+    policy_cheese = dict()
+    policy_home = dict()
     # env.display_in_grid(policy)
     result = []
     results = []
     policies = []
+    mission = '(F (c)) U (F (h))'
+    parser = LTLfParser()
+    mission_formula = parser(mission)
+
     for l in range(runs):
         for k in range(propsteps):
             # results.append(policy_test(policy, env))
@@ -171,21 +176,30 @@ def run_experiment(
             bboard.register_key(key='trace', access=common.Access.WRITE)
             bboard.trace = [env.get_states()]
             # print(k, policy)
-            policynode = MDPActionNode(
-                'c', env, policy, maxtrace, discount=discount)
-            ppataskbt = create_PPATask_GBT_learn('p', 'c', 't', 'g', policynode)
-            ppataskbt = BehaviourTree(ppataskbt)
-            # print(py_trees.display.ascii_tree(ppataskbt.root))
+            policynode_cheese = MDPActionNode(
+                'c', env, policy_cheese, maxtrace, discount=discount)
+            policynode_home = MDPActionNode(
+                'h', env, policy_home, maxtrace, discount=discount)
+            ppataskbt_cheese = create_PPATask_GBT_learn(
+                'p', 'c', 't', 'g', policynode_cheese)
+            ppataskbt_home = create_PPATask_GBT_learn(
+                'c', 'h', 't', 'g', policynode_home)
+            mappings = {'c':ppataskbt_cheese, 'h':ppataskbt_home}
+            gbt = parse_ltlf(
+                mission_formula, mappings, task_max=maxtrace)
+            ppamissionbt = BehaviourTree(gbt)
+            # ppataskbt = BehaviourTree(ppataskbt)
+            print(py_trees.display.ascii_tree(ppamissionbt.root))
             # add debug statement
             # py_trees.logging.level = py_trees.logging.Level.DEBUG
             for i in range(maxtrace):
-                ppataskbt.tick()
-                print(bboard.trace[-1], ppataskbt.root.status)
+                ppamissionbt.tick()
+                print(bboard.trace[-1], ppamissionbt.root.status)
                 if (
-                    (ppataskbt.root.status == common.Status.SUCCESS) or
-                        (ppataskbt.root.status == common.Status.FAILURE)):
+                    (ppamissionbt.root.status == common.Status.SUCCESS) or
+                        (ppamissionbt.root.status == common.Status.FAILURE)):
                     break
-            result.append([bboard.trace, ppataskbt.root.status])
+            result.append([bboard.trace, ppamissionbt.root.status])
         results.append(result)
         policies.append(policy)
     print(l, k, [state['state'] for state in bboard.trace])

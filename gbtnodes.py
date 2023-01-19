@@ -326,7 +326,7 @@ class LearnerRootNode(Decorator):
             # print(child_status, self.blackboard.trace)
             pass
         else:
-            # print('from propagation step', self.gtable)
+            print('from propagation step', self.action_symbol, self.gtable, child_status)
             tracea = []
             traces = [state['state'] for state in self.blackboard.trace]
             for state in self.blackboard.trace:
@@ -339,7 +339,7 @@ class LearnerRootNode(Decorator):
             for i in range(0, len(traces[0])-1, 1):
                 a = tracea[i]
                 ss = traces[i+1]
-                # print(self.gtable)
+                print(self.action_symbol, self.gtable.keys())
                 prob = self.gtable[ss][a]
                 Psi = pow(self.psi, j)
                 j += 1
@@ -359,7 +359,7 @@ class LearnerRootNode(Decorator):
                 probs = probs / probs.sum()
 
                 self.gtable[ss] = dict(zip(self.gtable[ss].keys(), probs))
-            # print('after propagation', self.gtable)
+            print('after propagation', self.action_symbol, self.gtable, child_status)
         return child_status
 
 
@@ -393,7 +393,7 @@ def create_PPATask_GBT_learn(
     ppatask = create_PPATask_GBT(
         precond, postcond, taskcnstr, gblcnstr, action_node)
     learner = LearnerRootNode(
-        ppatask, policy=action_node.gtable, discount=action_node.discount)
+        ppatask, name=postcond, policy=action_node.gtable, discount=action_node.discount)
     return learner
 
 
