@@ -330,27 +330,31 @@ class LearnerRootNode(Decorator):
             pass
         else:
             if len(self.blackboard.get(self.tkey))>0:
-                # print('from propagation step', self.action_symbol, self.gtable, child_status)
+                # print('from propagation step', self.action_symbol, child_status)
                 self.blackboard.set(self.tkey,
                     self.blackboard.get(self.tkey) + [self.blackboard.trace[-1]]
                 )
                 tracea = []
                 traces = [state['state'] for state in self.blackboard.get(self.tkey)]
+                # traces = [state['state'] for state in self.blackboard.trace]
                 for state in self.blackboard.get(self.tkey):
                     if state.get('action', None) is not None:
                         tracea.append(state['action'])
                 tracea = tracea[::-1]
                 traces = traces[::-1]
                 # psi = 0.9
-                previous_action = None
-                previous_state = None
+                # print([state['state'] for state in self.blackboard.trace])
+                # print(traces)
+                # print(tracea)
+                # previous_action = None
+                # previous_state = None
                 j = 1
-                for i in range(0, len(traces[0])-1, 1):
+                for i in range(0, len(traces)-1, 1):
                     a = tracea[i]
                     ss = traces[i+1]
-                    # print(self.action_symbol, self.gtable.keys())
+                    # print(ss, a, self.gtable[ss])
                     # if previous_state == ss and previous_action == a:
-                    #     pass
+                    #          pass
                     # else:
                     prob = self.gtable[ss][a]
                     Psi = pow(self.psi, j)
@@ -362,7 +366,7 @@ class LearnerRootNode(Decorator):
                         #     new_prob = prob - (Psi * prob)
                         # else:
                         #     new_prob = prob
-                        new_prob = prob - (Psi * prob)
+                        new_prob = prob -  (Psi * prob)
                     elif child_status == common.Status.SUCCESS:
                         new_prob = prob + (Psi * prob)
 

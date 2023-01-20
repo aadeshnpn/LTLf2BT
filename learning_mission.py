@@ -76,11 +76,11 @@ class MDPActionNode(Behaviour):
                         zip(self.actionsidx, p))
 
     def get_action(self, state):
-        actions = self.nprandom.choice(
-            self.actionsidx, 50,
+       return self.nprandom.choice(
+            self.actionsidx,
             p=list(self.gtable[state].values())
             )
-        return st.mode(actions)[0][0]
+       # return st.mode(actions)[0][0]
 
     def env_action_dict(self, action):
         action_dict = {
@@ -109,7 +109,7 @@ class MDPActionNode(Behaviour):
         if self.gtable.get(state, None) is None:
             self.create_gtable_indv(state)
         action = self.get_action(state)
-
+        # print('state action pair:',state, action)
         curr_loc, curr_reward, done, state = self.env.step(
             self.env_action_dict(action))
         self.index += 1
@@ -131,7 +131,7 @@ class MDPActionNode(Behaviour):
 
 def init_mdp(
         sloc=(3,0), reward = [-0.04, 2, -2],
-        uncertainty=(0.9,0.05,0.05)):
+        uncertainty=(0.9,0.05,0.05), random=True):
     """Initialized a simple MDP world."""
     grid = np.ones((4, 4)) * reward[0]
 
@@ -150,6 +150,12 @@ def init_mdp(
     # Terminal and obstacles defination
     grid[0][3] = reward[1]
     grid[1][3] = reward[2]
+
+    # while True:
+    #     randloc = tuple(np.random.randint(0, 4, 2).tolist())
+    #     if randloc not in [(3,3), [3,2]]:
+    #         break
+    # sloc = randloc if random else sloc
 
     mdp = GridMDP(
         grid, terminals=[], startloc=sloc,
@@ -180,7 +186,7 @@ def run_experiment(
         for k in range(propsteps):
             # results.append(policy_test(policy, env))
             # print(policy_test_step(policy, env))
-            env.restart()
+            env.restart(random=True)
             bboard = blackboard.Client(name='gbt')
             bboard.register_key(key='trace', access=common.Access.WRITE)
             bboard.trace = [env.get_states()]
@@ -198,20 +204,33 @@ def run_experiment(
             #     mission_formula, mappings, task_max=maxtrace)
             # ppamissionbt = BehaviourTree(gbt)
             ppamissionbt = BehaviourTree(ppataskbt_cheese)
-            print(py_trees.display.ascii_tree(ppamissionbt.root))
+            # print(py_trees.display.ascii_tree(ppamissionbt.root))
             # add debug statement
             # py_trees.logging.level = py_trees.logging.Level.DEBUG
             for i in range(maxtrace*2):
                 ppamissionbt.tick()
-                print(i, bboard.trace[-1], ppamissionbt.root.status)
+                # print(i, bboard.trace[-1], ppamissionbt.root.status)
                 if (
                     (ppamissionbt.root.status == common.Status.SUCCESS) or
                         (ppamissionbt.root.status == common.Status.FAILURE)):
                     break
             result.append([bboard.trace, ppamissionbt.root.status])
-        # results.append(result)
+        results.append(result)
         # policies.append(policy)
-    print(l, k, [state['state'] for state in bboard.trace])
+        print(sum([s[-1]==common.Status.SUCCESS for s in result])/propsteps)
+
+        policy = create_policy(policy_cheese)
+        # print(policy)
+        action_dict = {
+            0: (1, 0),
+            1: (0, 1),
+            2: (-1, 0),
+            3: (0, -1)
+        }
+        policy = {state:action_dict[action] for state, action in policy.items()}
+        env.display_in_grid(policy)
+        # print(policy_cheese)
+    print(l, k, [state['state'] for state in bboard.trace], ppamissionbt.root.status)
     # return results, policies
 
 
@@ -241,7 +260,7 @@ def experiments_parameters():
     discounts = [0.9]
     rewards = [(-0.04, 2, -2)]
     tracelens = [30]
-    propsteps = [30]
+    propsteps = [50]
 
     runs = 1
     results = dict()

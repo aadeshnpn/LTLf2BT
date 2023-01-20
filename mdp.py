@@ -312,9 +312,17 @@ class GridMDP(MDP):
                                for x in range(self.cols)]
                               for y in range(self.rows)]))
 
-    def restart(self):
-        self.curr_loc = self.startloc
-        self.curr_reward = self.reward[self.startloc]
+    def restart(self, random=False):
+        if random:
+            while True:
+                randloc = tuple(np.random.randint(0, 4, 2).tolist())
+                if randloc not in [(3,3), [3,2]]:
+                    break
+            self.curr_loc = randloc
+            self.curr_reward = self.reward[randloc]
+        else:
+            self.curr_loc = self.startloc
+            self.curr_reward = self.reward[self.startloc]
         self.cheese_memory = False
 
     def to_arrows(self, policy):
