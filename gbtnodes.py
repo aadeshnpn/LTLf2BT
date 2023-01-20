@@ -276,15 +276,18 @@ class LearnerRootNode(Decorator):
 
     def __init__(
             self, child, name=common.Name.AUTO_GENERATED,
-            policy=None, discount=0.9):
+            policy=None, discount=0.9, env=None):
         """Init method for the action node."""
         super(LearnerRootNode, self).__init__(name=name, child=child)
         self.action_symbol = name
         self.blackboard = blackboard.Client(name='gbt')
-        self.blackboard.register_key(key='trace', access=common.Access.WRITE)
+        self.blackboard.register_key(key='trace', access=common.Access.READ)
+        self.tkey = 'trace'+name
+        self.blackboard.register_key(key=self.tkey, access=common.Access.WRITE)
         self.index = 0
         self.gtable = policy
         self.psi = discount
+        self.env = env
 
     def setup(self, timeout, trace=None, i=0):
         """Have defined the setup method.
@@ -326,40 +329,52 @@ class LearnerRootNode(Decorator):
             # print(child_status, self.blackboard.trace)
             pass
         else:
-            print('from propagation step', self.action_symbol, self.gtable, child_status)
-            tracea = []
-            traces = [state['state'] for state in self.blackboard.trace]
-            for state in self.blackboard.trace:
-                if state.get('action', None) is not None:
-                    tracea.append(state['action'])
-            tracea = tracea[::-1]
-            traces = traces[::-1]
-            # psi = 0.9
-            j = 1
-            for i in range(0, len(traces[0])-1, 1):
-                a = tracea[i]
-                ss = traces[i+1]
-                print(self.action_symbol, self.gtable.keys())
-                prob = self.gtable[ss][a]
-                Psi = pow(self.psi, j)
-                j += 1
-                if child_status == common.Status.FAILURE:
-                    # temp_state = self.blackboard.trace[i+1]
-                    # # print(child_status, temp_state)
-                    # if temp_state['t'] is False or temp_state['g'] is False or temp_state['p'] is False:
-                    #     new_prob = prob - (Psi * prob)
+            if len(self.blackboard.get(self.tkey))>0:
+                # print('from propagation step', self.action_symbol, self.gtable, child_status)
+                self.blackboard.set(self.tkey,
+                    self.blackboard.get(self.tkey) + [self.blackboard.trace[-1]]
+                )
+                tracea = []
+                traces = [state['state'] for state in self.blackboard.get(self.tkey)]
+                for state in self.blackboard.get(self.tkey):
+                    if state.get('action', None) is not None:
+                        tracea.append(state['action'])
+                tracea = tracea[::-1]
+                traces = traces[::-1]
+                # psi = 0.9
+                previous_action = None
+                previous_state = None
+                j = 1
+                for i in range(0, len(traces[0])-1, 1):
+                    a = tracea[i]
+                    ss = traces[i+1]
+                    # print(self.action_symbol, self.gtable.keys())
+                    # if previous_state == ss and previous_action == a:
+                    #     pass
                     # else:
-                    #     new_prob = prob
-                    new_prob = prob - (Psi * prob)
-                elif child_status == common.Status.SUCCESS:
-                    new_prob = prob + (Psi * prob)
+                    prob = self.gtable[ss][a]
+                    Psi = pow(self.psi, j)
+                    j += 1
+                    if child_status == common.Status.FAILURE:
+                        # temp_state = self.blackboard.trace[i+1]
+                        # # print(child_status, temp_state)
+                        # if temp_state['t'] is False or temp_state['g'] is False or temp_state['p'] is False:
+                        #     new_prob = prob - (Psi * prob)
+                        # else:
+                        #     new_prob = prob
+                        new_prob = prob - (Psi * prob)
+                    elif child_status == common.Status.SUCCESS:
+                        new_prob = prob + (Psi * prob)
 
-                self.gtable[ss][a] = new_prob
-                probs = np.array(list(self.gtable[ss].values()))
-                probs = probs / probs.sum()
-
-                self.gtable[ss] = dict(zip(self.gtable[ss].keys(), probs))
-            print('after propagation', self.action_symbol, self.gtable, child_status)
+                    self.gtable[ss][a] = new_prob
+                    probs = np.array(list(self.gtable[ss].values()))
+                    probs = probs / probs.sum()
+                    self.gtable[ss] = dict(zip(self.gtable[ss].keys(), probs))
+                    # previous_state = ss
+                    # previous_action = a
+                # print('after propagation', self.action_symbol, self.gtable, child_status)
+                self.blackboard.set(self.tkey, [])
+                # self.env.reset()
         return child_status
 
 
@@ -393,7 +408,8 @@ def create_PPATask_GBT_learn(
     ppatask = create_PPATask_GBT(
         precond, postcond, taskcnstr, gblcnstr, action_node)
     learner = LearnerRootNode(
-        ppatask, name=postcond, policy=action_node.gtable, discount=action_node.discount)
+        ppatask, name=postcond, policy=action_node.gtable,
+        discount=action_node.discount, env=action_node.env)
     return learner
 
 
@@ -478,7 +494,7 @@ class Until(Decorator):
     def update(self):
         """
         Main function that is called when BT ticks.
-        This returns the Globally operator status
+        This returns the Until operator status
         """
         #  Repeat until logic for decorator
         return_value = self.decorated.status
@@ -536,6 +552,9 @@ class Reset(Decorator):
         self.idx += 1
         if return_value == common.Status.SUCCESS and self.idx <= self.tmax:
             return return_value
+        elif return_value == common.Status.FAILURE:
+            self.decorated.reset()
+            return common.Status.RUNNING
         elif self.idx > self.tmax:
             return common.Status.FAILURE
         else:

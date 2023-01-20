@@ -11,6 +11,7 @@ import py_trees
 import numpy as np
 import pickle
 from flloat.parser.ltlf import LTLfParser
+from scipy import stats as st
 
 
 class MDPActionNode(Behaviour):
@@ -28,6 +29,9 @@ class MDPActionNode(Behaviour):
         self.action_symbol = name
         self.blackboard = blackboard.Client(name='gbt')
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
+        self.tkey = 'trace' +name
+        self.blackboard.register_key(key=self.tkey, access=common.Access.WRITE)
+        self.blackboard.set(self.tkey, [])
         self.env = env
         self.gtable = planner
         self.index = 0
@@ -72,10 +76,11 @@ class MDPActionNode(Behaviour):
                         zip(self.actionsidx, p))
 
     def get_action(self, state):
-        return self.nprandom.choice(
-            self.actionsidx,
+        actions = self.nprandom.choice(
+            self.actionsidx, 50,
             p=list(self.gtable[state].values())
             )
+        return st.mode(actions)[0][0]
 
     def env_action_dict(self, action):
         action_dict = {
@@ -100,7 +105,7 @@ class MDPActionNode(Behaviour):
         #         break
         # return trace
         # print('Planner', self.planner)
-        state = self.curr_loc
+        state = self.env.curr_loc
         if self.gtable.get(state, None) is None:
             self.create_gtable_indv(state)
         action = self.get_action(state)
@@ -109,6 +114,9 @@ class MDPActionNode(Behaviour):
             self.env_action_dict(action))
         self.index += 1
         self.blackboard.trace[-1]['action'] = action
+        # print('different notation', self.tkey, state, self.blackboard.trace[-1])
+        self.blackboard.set(
+            self.tkey, self.blackboard.get(self.tkey) + [self.blackboard.trace[-1]])
         # print('action node',self.index, self.task_max, self.blackboard.trace[-1])
         self.blackboard.trace.append(state)
         self.curr_loc = curr_loc
@@ -163,7 +171,8 @@ def run_experiment(
     result = []
     results = []
     policies = []
-    mission = '(F (c)) U (F (h))'
+    # mission = '(F (c)) U (F (h))'
+    mission = '(c) U (h)'
     parser = LTLfParser()
     mission_formula = parser(mission)
 
@@ -185,25 +194,25 @@ def run_experiment(
             ppataskbt_home = create_PPATask_GBT_learn(
                 'c', 'h', 't', 'g', policynode_home)
             mappings = {'c':ppataskbt_cheese, 'h':ppataskbt_home}
-            gbt = parse_ltlf(
-                mission_formula, mappings, task_max=maxtrace)
-            ppamissionbt = BehaviourTree(gbt)
-            # ppataskbt = BehaviourTree(ppataskbt)
+            # gbt = parse_ltlf(
+            #     mission_formula, mappings, task_max=maxtrace)
+            # ppamissionbt = BehaviourTree(gbt)
+            ppamissionbt = BehaviourTree(ppataskbt_cheese)
             print(py_trees.display.ascii_tree(ppamissionbt.root))
             # add debug statement
             # py_trees.logging.level = py_trees.logging.Level.DEBUG
-            for i in range(maxtrace):
+            for i in range(maxtrace*2):
                 ppamissionbt.tick()
-                print(bboard.trace[-1], ppamissionbt.root.status)
+                print(i, bboard.trace[-1], ppamissionbt.root.status)
                 if (
                     (ppamissionbt.root.status == common.Status.SUCCESS) or
                         (ppamissionbt.root.status == common.Status.FAILURE)):
                     break
             result.append([bboard.trace, ppamissionbt.root.status])
-        results.append(result)
-        policies.append(policy)
+        # results.append(result)
+        # policies.append(policy)
     print(l, k, [state['state'] for state in bboard.trace])
-    return results, policies
+    # return results, policies
 
 
 def experiments_parameters():
@@ -232,7 +241,7 @@ def experiments_parameters():
     discounts = [0.9]
     rewards = [(-0.04, 2, -2)]
     tracelens = [30]
-    propsteps = [50]
+    propsteps = [30]
 
     runs = 1
     results = dict()
