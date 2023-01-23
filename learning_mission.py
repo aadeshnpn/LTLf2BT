@@ -186,7 +186,7 @@ def run_experiment(
         for k in range(propsteps):
             # results.append(policy_test(policy, env))
             # print(policy_test_step(policy, env))
-            env.restart(random=True)
+            env.restart(random=False)
             bboard = blackboard.Client(name='gbt')
             bboard.register_key(key='trace', access=common.Access.WRITE)
             bboard.trace = [env.get_states()]

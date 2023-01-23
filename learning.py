@@ -28,6 +28,9 @@ class MDPActionNode(Behaviour):
         self.action_symbol = name
         self.blackboard = blackboard.Client(name='gbt')
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
+        self.tkey = 'trace' +name
+        self.blackboard.register_key(key=self.tkey, access=common.Access.WRITE)
+        self.blackboard.set(self.tkey, [])
         self.env = env
         self.gtable = planner
         self.index = 0
@@ -109,6 +112,9 @@ class MDPActionNode(Behaviour):
             self.env_action_dict(action))
         self.index += 1
         self.blackboard.trace[-1]['action'] = action
+        # print('different notation', self.tkey, state, self.blackboard.trace[-1])
+        self.blackboard.set(
+            self.tkey, self.blackboard.get(self.tkey) + [self.blackboard.trace[-1]])
         # print('action node',self.index, self.task_max, self.blackboard.trace[-1])
         self.blackboard.trace.append(state)
         self.curr_loc = curr_loc
@@ -159,10 +165,10 @@ def run_experiment(
     # policy = random_policy()
     policy = dict()
     # env.display_in_grid(policy)
-    result = []
-    results = []
     policies = []
+    results = []
     for l in range(runs):
+        result = []
         for k in range(propsteps):
             # results.append(policy_test(policy, env))
             # print(policy_test_step(policy, env))
@@ -180,7 +186,7 @@ def run_experiment(
             # py_trees.logging.level = py_trees.logging.Level.DEBUG
             for i in range(maxtrace):
                 ppataskbt.tick()
-                print(bboard.trace[-1], ppataskbt.root.status)
+                # print(bboard.trace[-1], ppataskbt.root.status)
                 if (
                     (ppataskbt.root.status == common.Status.SUCCESS) or
                         (ppataskbt.root.status == common.Status.FAILURE)):
@@ -188,7 +194,8 @@ def run_experiment(
             result.append([bboard.trace, ppataskbt.root.status])
         results.append(result)
         policies.append(policy)
-    print(l, k, [state['state'] for state in bboard.trace])
+    # print(len(result), len(results))
+    # print(l, k, [state['state'] for state in bboard.trace])
     return results, policies
 
 
@@ -209,18 +216,20 @@ def experiments_parameters():
         # (0.7, 0.15, 0.15), (0.6, 0.2, 0.2),
         # (0.5, 0.25, 0.25), (0.4, 0.3, 0.3),
         ]
-    discounts = [0.99, 0.95, 0.9, 0.85, 0.8]
+    discounts = [
+        0.99, 0.95, 0.9, 0.85, 0.8, 0.7,
+        0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
 
     tracelens = [10, 15, 20, 25, 30, 40, 50]
     propsteps = [10, 15, 20, 25, 30, 40, 50]
 
-    uncertainties = [(0.95, 0.025, 0.025)]
-    discounts = [0.9]
-    rewards = [(-0.04, 2, -2)]
-    tracelens = [30]
-    propsteps = [50]
+    # uncertainties = [(0.95, 0.025, 0.025)]
+    # discounts = [0.9]
+    # rewards = [(-0.04, 2, -2)]
+    # tracelens = [30]
+    # propsteps = [50]
 
-    runs = 1
+    runs = 50
     results = dict()
     j = 0
     for discount in discounts:
@@ -238,12 +247,12 @@ def experiments_parameters():
                     results[discount][uc][tlen][pstep]['policy'] = policy
         j += 1
 
-    # with open('/tmp/learning_30.pickle', 'wb') as file:
-    #     pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('/tmp/learning_30_all.pickle', 'wb') as file:
+        pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # with open('/tmp/learning_30.pickle', 'rb') as file:
-    #     data = pickle.load(file)
-    # print('Experiment Done', data)
+    with open('/tmp/learning_30_all.pickle', 'rb') as file:
+        data = pickle.load(file)
+    print('Experiment Done', len(data))
 
 
 def main():
