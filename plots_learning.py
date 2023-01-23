@@ -166,6 +166,116 @@ def plot_discount_uncertainty(
     plt.close(fig_power)
 
 
+def plot_power(
+        datas, tracelen=15, propsteps=25, discount=0.7,
+        fname='resilence_power'):
+    uncertainties = [
+        (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
+        (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
+        ]
+    t = tracelen
+    p = propsteps
+    d = discount
+    info = dict()
+    for u in uncertainties:
+        info[u] = {'trace':[], 'success':[]}
+        for r in range(len(datas[d][u][t][p]['result'])):
+            btstatus = [d[1] for d in datas[d][u][t][p]['result'][r]]
+            trace = [d[0] for d in datas[d][u][t][p]['result'][r]]
+            # print(t, p, len(trace), btstatus)
+            results = [True if status == common.Status.SUCCESS else False for status in btstatus]
+            success_prob = round(sum(results) / p, 2)
+            trace_len = [len(t) for t in trace]
+            average_len = round(sum(trace_len) / p, 2)
+            # print(t, p, success_prob, average_len)
+            # print(j, p, average_len, success_prob)
+            info[u]['trace'].append(average_len)
+            info[u]['success'].append(success_prob)
+
+    fig_power = plt.figure(figsize=(8, 6), dpi=100)
+    ax_power = fig_power.add_subplot(1, 1, 1)
+
+    success_probs = [info[data]['success'] for data in info.keys()]
+    medianprops = dict(linewidth=2.5, color='firebrick')
+    meanprops = dict(linewidth=2.5, color='#ff7f0e')
+    bp2 = ax_power.boxplot(
+            success_probs, 0, 'gD', showmeans=True, meanline=True,
+            patch_artist=True, medianprops=medianprops,
+            meanprops=meanprops, widths=0.3)
+    ax_power.set_ylabel('Success Probability', fontsize='large' )
+    ax_power.set_xlabel('Uncertainty', fontsize='large')
+
+    ax_power.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
+    ax_power.set_xticklabels(uncertainties)
+    ax_power.set_title('Resiliency Power')
+
+
+    plt.tight_layout(pad=0.5)
+
+    maindir = '/tmp/'
+    # fname = 'mpd_power_30'
+
+    fig_power.savefig(
+        maindir + '/' + fname + '_'+ str(t)+ '_'+ str(p)+ '.png')
+    # pylint: disable = E1101
+    plt.close(fig_power)
+
+
+def plot_efficiency(
+        datas, tracelen=15, propsteps=25, discount=0.7,
+        fname='resilence_efficiency'):
+    uncertainties = [
+        (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
+        (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
+        ]
+    t = tracelen
+    p = propsteps
+    d = discount
+    info = dict()
+    for u in uncertainties:
+        info[u] = {'trace':[], 'success':[]}
+        for r in range(len(datas[d][u][t][p]['result'])):
+            btstatus = [d[1] for d in datas[d][u][t][p]['result'][r]]
+            trace = [d[0] for d in datas[d][u][t][p]['result'][r]]
+            # print(t, p, len(trace), btstatus)
+            results = [True if status == common.Status.SUCCESS else False for status in btstatus]
+            success_prob = round(sum(results) / p, 2)
+            trace_len = [len(t) for t in trace]
+            average_len = round(sum(trace_len) / p, 2)
+            # print(t, p, success_prob, average_len)
+            # print(j, p, average_len, success_prob)
+            info[u]['trace'].append(average_len)
+            info[u]['success'].append(success_prob)
+
+    fig_power = plt.figure(figsize=(8, 6), dpi=100)
+    ax_power = fig_power.add_subplot(1, 1, 1)
+
+    trace_lens = [info[data]['trace'] for data in info.keys()]
+    medianprops = dict(linewidth=2.5, color='firebrick')
+    meanprops = dict(linewidth=2.5, color='#ff7f0e')
+    bp2 = ax_power.boxplot(
+            trace_lens, 0, 'gD', showmeans=True, meanline=True,
+            patch_artist=True, medianprops=medianprops,
+            meanprops=meanprops, widths=0.3)
+    ax_power.set_ylabel('Trace Length', fontsize='large' )
+    ax_power.set_xlabel('Uncertainty', fontsize='large')
+
+    ax_power.set_yticks([3, 6, 9, 12, 15])
+    ax_power.set_xticklabels(uncertainties)
+    ax_power.set_title('Resiliency Efficiency')
+
+
+    plt.tight_layout(pad=0.5)
+
+    maindir = '/tmp/'
+    # fname = 'mpd_power_30'
+
+    fig_power.savefig(
+        maindir + '/' + fname + '_'+ str(t)+ '_'+ str(p)+ '.png')
+    # pylint: disable = E1101
+    plt.close(fig_power)
+
+
 def main():
     data = get_data()
     print(len(data))
@@ -184,7 +294,9 @@ def main():
     #     plot_tracelen_vs_static_propstep(data,
     #         discount=d, uncetainty=uncertainties[0])
 
-    plot_discount_uncertainty(data)
+    # plot_discount_uncertainty(data)
+    plot_power(data)
+    plot_efficiency(data)
 
 
 if __name__ =='__main__':
