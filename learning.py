@@ -200,7 +200,7 @@ def run_experiment(
                         (ppataskbt.root.status == common.Status.FAILURE)):
                     break
             result.append([bboard.trace, ppataskbt.root.status])
-        print(l, ppataskbt.root.status)
+        # print(l, ppataskbt.root.status)
         results.append(result)
         policies.append(policy)
     # print(len(result), len(results))
@@ -274,8 +274,8 @@ def experiments_parameters():
     uncertainties = [
         (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
         (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
-        # (0.7, 0.15, 0.15), (0.6, 0.2, 0.2),
-        # (0.5, 0.25, 0.25), (0.4, 0.3, 0.3),
+        (0.7, 0.15, 0.15), (0.6, 0.2, 0.2),
+        (0.5, 0.25, 0.25), (0.4, 0.3, 0.3),
         ]
     discounts = [
         0.99, 0.95, 0.9, 0.85, 0.8, 0.7,
@@ -318,8 +318,8 @@ def experiments_parameters():
 
 def run_experiment_with_random_loc():
     runs = 50
-    tlen = 25
-    pstep = 50
+    tlen = 35
+    pstep = 80
     discount = 0.9
     rewards = [(-0.04, 2, -2)]
     uncertainties = [(0.95, 0.025, 0.025)]
@@ -350,8 +350,8 @@ def run_experiment_with_random_loc():
 
 
 def main():
-    # experiments_parameters()
-    run_experiment_with_random_loc()
+    experiments_parameters()
+    # run_experiment_with_random_loc()
 
 
 if __name__ =='__main__':
