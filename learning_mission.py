@@ -2,7 +2,7 @@ from mdp import (
     GridMDP, create_policy,
     policy_iteration, policy_test,
     policy_test_step, random_policy)
-from gbtnodes import create_PPATask_GBT_learn, parse_ltlf
+from gbtnodesRevised import create_PPATask_GBT_learn, parse_ltlf
 
 from py_trees import common, blackboard
 from py_trees.trees import BehaviourTree

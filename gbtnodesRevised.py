@@ -62,7 +62,7 @@ class ConditionNode(Behaviour):
         #     self.name, self.proposition_symbol, self.blackboard.trace[-1],
         #     self.blackboard.trace[-1][self.proposition_symbol])
         try:
-            if self.env.get_state()[self.proposition_symbol]:
+            if self.env.get_states()[self.proposition_symbol]:
             # if self.blackboard.trace[-1][self.proposition_symbol]:
                 return_value = common.Status.SUCCESS
             else:
@@ -368,10 +368,10 @@ def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
     task_seq = Sequence('sigma_task', memory=False)
     until_seq = Sequence('sigma_until', memory=False)
     action_seq = Parallel('sigma_action')
-    precond_node  = ConditionNode(precond)
-    postcond_node  = ConditionNode(postcond)
-    taskcnstr_node  = ConditionNode(taskcnstr)
-    gblcnstr_node  = ConditionNode(gblcnstr)
+    precond_node  = ConditionNode(precond,  env=action_node.env)
+    postcond_node  = ConditionNode(postcond, env=action_node.env)
+    taskcnstr_node  = ConditionNode(taskcnstr, env=action_node.env)
+    gblcnstr_node  = ConditionNode(gblcnstr, env=action_node.env)
     gblcnstr_decorator_1 = Globally(gblcnstr_node)
     gblcnstr_decorator_2 = copy.copy(gblcnstr_decorator_1)
     gblcnstr_decorator_3 = copy.copy(gblcnstr_decorator_1)
@@ -404,7 +404,7 @@ class Finally(Decorator):
     Inherits the Decorator class from py_trees. This
     behavior implements the Finally LTLf operator.
     """
-    def __init__(self, child, name=common.Name.AUTO_GENERATED, task_max=4):
+    def __init__(self, child, name=common.Name.AUTO_GENERATED, task_max=2):
         """
         Init with the decorated child.
 
@@ -419,7 +419,6 @@ class Finally(Decorator):
 
     def reset(self, **kwargs):
         self.memory = common.Status.SUCCESS
-        self.idx = 0
         def reset(children, **kwargs):
             for child in children:
                 try:
@@ -438,15 +437,16 @@ class Finally(Decorator):
         """
         #  Repeat until logic for decorator
         return_value = self.decorated.status
+        self.idx += 1
         if return_value == common.Status.RUNNING:
-            self.idx += 1
             return common.Status.RUNNING
         elif return_value == common.Status.FAILURE:
             # Reset all child decorator nodes and return running
             self.reset(idx=0)
             if self.idx > self.task_max:
                 return common.Status.FAILURE
-            return common.Status.RUNNING
+            else:
+                return common.Status.RUNNING
         return self.memory
 
 
@@ -502,7 +502,7 @@ class Reset(Decorator):
     Inherits the Decorator class from py_trees. This
     behavior implements the Reset Decorator.
     """
-    def __init__(self, child, name=common.Name.AUTO_GENERATED, tmax=20):
+    def __init__(self, child, name=common.Name.AUTO_GENERATED, tmax=2):
         """
         Init with the decorated child.
 
@@ -515,12 +515,19 @@ class Reset(Decorator):
         self.memory = common.Status.SUCCESS
         self.tmax = tmax
 
-    def reset(self, i=0):
+    def reset(self, **kwargs):
         self.memory = common.Status.SUCCESS
+        # self.idx = 0
+        def reset(children, **kwargs):
+            for child in children:
+                try:
+                    child.reset(**kwargs)
+                except AttributeError:
+                    reset(child.children, **kwargs)
+        reset(self.children, **kwargs)
 
-
-    def setup(self, timeout, i=0):
-        self.decorated.setup(0, self.idx)
+    def setup(self):
+        self.decorated.setup()
 
     def update(self):
         """
@@ -532,13 +539,13 @@ class Reset(Decorator):
         self.idx += 1
         if return_value == common.Status.SUCCESS and self.idx <= self.tmax:
             return return_value
-        elif return_value == common.Status.FAILURE:
-            self.decorated.reset()
-            return common.Status.RUNNING
         elif self.idx > self.tmax:
             return common.Status.FAILURE
-        else:
+        elif return_value == common.Status.FAILURE:
+            self.reset()
             return common.Status.RUNNING
+        else:
+            return common.Status.FAILURE
 
 
 class PPATaskNode(Behaviour):
