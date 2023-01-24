@@ -200,6 +200,7 @@ def run_experiment(
                         (ppataskbt.root.status == common.Status.FAILURE)):
                     break
             result.append([bboard.trace, ppataskbt.root.status])
+        print(l, ppataskbt.root.status)
         results.append(result)
         policies.append(policy)
     # print(len(result), len(results))
@@ -237,26 +238,25 @@ def policy_test_step(pi, mdp, max_trace=29):
 
 def run_experiment_given_policy(
         policy, uncertainty, runs=10,
-        maxtrace=30, random=True):
+        maxtrace=30, random=False):
     env = init_mdp(
-        reward=[0.2, 2, 2], uncertainty=uncertainty, random=random)
+        reward=[-0.04, 2, 2], uncertainty=uncertainty, random=random)
     # policy = policy_iteration(env)
     # policy = random_policy()
-    # env.display_in_grid(policy)
     action_dict = {
         0: (1, 0),
         1: (0, 1),
         2: (-1, 0),
         3: (0, -1)
     }
-    policy = {state:action_dict[np.argmax(actions)] for state,actions in policy.items()}
+    policy = {state:action_dict[np.argmax(list(actions.values()))] for state,actions in policy.items()}
+    # env.display_in_grid(policy)
     results = []
     for l in range(runs):
         env.restart(random=random)
-        result, trace = policy_test_step(policy, env)
-        print(result, trace)
+        result, trace = policy_test_step(policy, env, max_trace=maxtrace)
+        # print(l, result, trace)
         results.append([result, trace])
-
     return results
 
 
@@ -318,19 +318,27 @@ def experiments_parameters():
 
 def run_experiment_with_random_loc():
     runs = 50
-    tlen = 15
-    pstep = 25
-    discount = 0.7
+    tlen = 25
+    pstep = 50
+    discount = 0.9
     rewards = [(-0.04, 2, -2)]
     uncertainties = [(0.95, 0.025, 0.025)]
     res, policy = run_experiment(
         rewards[0], uncertainties[0], runs, maxtrace=tlen,
         propsteps=pstep, discount=discount,random=False)
 
-    results = []
-    for p in policy:
-        results.append(
-            run_experiment_given_policy(p, uncertainties[0], 30, True))
+    results = {}
+    uncertainties = [
+        (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
+        (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
+        ]
+    for j in range(len(res)):
+        for u in uncertainties:
+            results[u] = results.get(u, [])
+            if res[j][-1][1] == common.Status.SUCCESS:
+                results[u].append(
+                    run_experiment_given_policy(
+                        policy[j], u, runs=50, maxtrace=29, random=True))
 
     with open('/tmp/resilence_test_randomstart.pickle', 'wb') as file:
         pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
