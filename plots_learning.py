@@ -276,27 +276,140 @@ def plot_efficiency(
     plt.close(fig_power)
 
 
-def main():
-    data = get_data()
-    print(len(data))
+def plot_power_policy_random_startloc(
+        datas, tracelen=15, propsteps=25, discount=0.7,
+        fname='resilence_power_randomloc'):
     uncertainties = [
         (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
         (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
         ]
-    discounts = [
-        0.99, 0.95, 0.9, 0.85, 0.8, 0.7,
-        0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
-    tracelens = [10, 15, 20, 25, 30, 40, 50]
-    propsteps = [10, 15, 20, 25, 30, 40, 50]
-    runs = 50
+    t = tracelen
+    p = propsteps
+    d = discount
+    info = dict()
+    for u in uncertainties:
+        info[u] = {'trace':[], 'success':[]}
+        for j in range(len(datas[u])):
+            results = [d[j][0] for d in datas[u]]
+            # print(j, [d[j][0] for d in datas[u]])
+            # btstatus = [d[1] for d in datas[u][0]]
+            trace = [d[j][1] for d in datas[u]]
+            success_prob = round(sum(results) / len(results), 2)
+            trace_len = [len(t) for t in trace]
+            average_len = round(sum(trace_len) / len(results), 2)
+            # print(j, u, success_prob, average_len)
+            info[u]['trace'].append(average_len)
+            info[u]['success'].append(success_prob)
 
-    # for d in discounts:
-    #     plot_tracelen_vs_static_propstep(data,
-    #         discount=d, uncetainty=uncertainties[0])
+    fig_power = plt.figure(figsize=(8, 6), dpi=100)
+    ax_power = fig_power.add_subplot(1, 1, 1)
 
-    # plot_discount_uncertainty(data)
-    plot_power(data)
-    plot_efficiency(data)
+    success_probs = [info[data]['success'] for data in info.keys()]
+    medianprops = dict(linewidth=2.5, color='firebrick')
+    meanprops = dict(linewidth=2.5, color='#ff7f0e')
+    bp2 = ax_power.boxplot(
+            success_probs, 0, 'gD', showmeans=True, meanline=True,
+            patch_artist=True, medianprops=medianprops,
+            meanprops=meanprops, widths=0.3)
+    ax_power.set_ylabel('Success Probability', fontsize='large' )
+    ax_power.set_xlabel('Uncertainty', fontsize='large')
+
+    ax_power.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
+    ax_power.set_xticklabels(uncertainties)
+    ax_power.set_title('Resiliency Power (Random Start Loc)')
+
+
+    plt.tight_layout(pad=0.5)
+
+    maindir = '/tmp/'
+    # fname = 'mpd_power_30'
+
+    fig_power.savefig(
+        maindir + '/' + fname + '_'+ str(t)+ '_'+ str(p)+ '.png')
+    # pylint: disable = E1101
+    plt.close(fig_power)
+
+
+def plot_efficiency_random_start_loc(
+        datas, tracelen=15, propsteps=25, discount=0.7,
+        fname='resilence_efficiency_random_loc'):
+    uncertainties = [
+        (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
+        (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
+        ]
+    t = tracelen
+    p = propsteps
+    d = discount
+    info = dict()
+    for u in uncertainties:
+        info[u] = {'trace':[], 'success':[]}
+        for j in range(len(datas[u])):
+            results = [d[j][0] for d in datas[u]]
+            # print(j, [d[j][0] for d in datas[u]])
+            # btstatus = [d[1] for d in datas[u][0]]
+            trace = [d[j][1] for d in datas[u]]
+            success_prob = round(sum(results) / len(results), 2)
+            trace_len = [len(t) for t in trace]
+            average_len = round(sum(trace_len) / len(results), 2)
+            # print(j, u, success_prob, average_len)
+            info[u]['trace'].append(average_len)
+            info[u]['success'].append(success_prob)
+
+    fig_power = plt.figure(figsize=(8, 6), dpi=100)
+    ax_power = fig_power.add_subplot(1, 1, 1)
+
+    trace_lens = [info[data]['trace'] for data in info.keys()]
+    medianprops = dict(linewidth=2.5, color='firebrick')
+    meanprops = dict(linewidth=2.5, color='#ff7f0e')
+    bp2 = ax_power.boxplot(
+            trace_lens, 0, 'gD', showmeans=True, meanline=True,
+            patch_artist=True, medianprops=medianprops,
+            meanprops=meanprops, widths=0.3)
+    ax_power.set_ylabel('Trace Length', fontsize='large' )
+    ax_power.set_xlabel('Uncertainty', fontsize='large')
+
+    ax_power.set_yticks([3, 6, 9, 12, 15])
+    ax_power.set_xticklabels(uncertainties)
+    ax_power.set_title('Resiliency Efficiency (Random Start Loc)')
+
+    plt.tight_layout(pad=0.5)
+
+    maindir = '/tmp/'
+    # fname = 'mpd_power_30'
+
+    fig_power.savefig(
+        maindir + '/' + fname + '_'+ str(t)+ '_'+ str(p)+ '.png')
+    # pylint: disable = E1101
+    plt.close(fig_power)
+
+
+
+def main():
+    # data = get_data()
+    # print(len(data))
+    uncertainties = [
+        (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
+        (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
+        ]
+    # discounts = [
+    #     0.99, 0.95, 0.9, 0.85, 0.8, 0.7,
+    #     0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+    # tracelens = [10, 15, 20, 25, 30, 40, 50]
+    # propsteps = [10, 15, 20, 25, 30, 40, 50]
+    # runs = 50
+
+    # # for d in discounts:
+    # #     plot_tracelen_vs_static_propstep(data,
+    # #         discount=d, uncetainty=uncertainties[0])
+
+    # # plot_discount_uncertainty(data)
+    # plot_power(data)
+    # plot_efficiency(data)
+
+    data = get_data(filename='/tmp/resilence_test_randomstart.pickle')
+
+    plot_power_policy_random_startloc(data)
+    plot_efficiency_random_start_loc(data)
 
 
 if __name__ =='__main__':
