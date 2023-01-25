@@ -171,18 +171,18 @@ def run_experiment(
     env = init_mdp(reward=reward, uncertainty=uncertainty)
     # policy = policy_iteration(env)
     # policy = random_policy()
-    policy_cheese = dict()
-    policy_home = dict()
     # env.display_in_grid(policy)
     result = []
     results = []
     policies = []
     # mission = '(F (c)) U (F (h))'
-    mission = '(c) U (h)'
+    mission = '((F(c)) U (F(h)))'
     parser = LTLfParser()
     mission_formula = parser(mission)
 
     for l in range(runs):
+        policy_cheese = dict()
+        policy_home = dict()
         for k in range(propsteps):
             # results.append(policy_test(policy, env))
             # print(policy_test_step(policy, env))
@@ -200,16 +200,16 @@ def run_experiment(
             ppataskbt_home = create_PPATask_GBT_learn(
                 'c', 'h', 't', 'g', policynode_home)
             mappings = {'c':ppataskbt_cheese, 'h':ppataskbt_home}
-            # gbt = parse_ltlf(
-            #     mission_formula, mappings, task_max=maxtrace)
-            # ppamissionbt = BehaviourTree(gbt)
-            ppamissionbt = BehaviourTree(ppataskbt_cheese)
+            gbt = parse_ltlf(
+                mission_formula, mappings, task_max=maxtrace)
+            ppamissionbt = BehaviourTree(gbt)
+            # ppamissionbt = BehaviourTree(ppataskbt_cheese)
             # print(py_trees.display.ascii_tree(ppamissionbt.root))
             # add debug statement
             # py_trees.logging.level = py_trees.logging.Level.DEBUG
             for i in range(maxtrace*2):
                 ppamissionbt.tick()
-                # print(i, bboard.trace[-1], ppamissionbt.root.status)
+                print(i, bboard.trace[-1], ppamissionbt.root.status)
                 if (
                     (ppamissionbt.root.status == common.Status.SUCCESS) or
                         (ppamissionbt.root.status == common.Status.FAILURE)):
@@ -229,9 +229,13 @@ def run_experiment(
         }
         policy = {state:action_dict[action] for state, action in policy.items()}
         env.display_in_grid(policy)
+        policy = create_policy(policy_home)
+        policy = {state:action_dict[action] for state, action in policy.items()}
+        print("\n")
+        env.display_in_grid(policy)
         # print(policy_cheese)
     print(l, k, [state['state'] for state in bboard.trace], ppamissionbt.root.status)
-    # return results, policies
+    return results, policies
 
 
 def experiments_parameters():
@@ -259,8 +263,8 @@ def experiments_parameters():
     uncertainties = [(0.95, 0.025, 0.025)]
     discounts = [0.9]
     rewards = [(-0.04, 2, -2)]
-    tracelens = [30]
-    propsteps = [50]
+    tracelens = [25]
+    propsteps = [80]
 
     runs = 1
     results = dict()

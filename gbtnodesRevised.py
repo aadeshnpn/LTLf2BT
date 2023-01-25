@@ -442,7 +442,7 @@ class Finally(Decorator):
             return common.Status.RUNNING
         elif return_value == common.Status.FAILURE:
             # Reset all child decorator nodes and return running
-            self.reset(idx=0)
+            self.reset()
             if self.idx > self.task_max:
                 return common.Status.FAILURE
             else:
@@ -492,6 +492,7 @@ class Until(Decorator):
         else:
             return_value = self.first
             self.first = self.decorated.status
+            # print('Until', return_value, self.first)
             return return_value
 
 
@@ -537,11 +538,14 @@ class Reset(Decorator):
         #  Repeat until logic for decorator
         return_value = self.decorated.status
         self.idx += 1
-        if return_value == common.Status.SUCCESS and self.idx <= self.tmax:
+        print('From reset', self.idx, self.tmax, return_value)
+        if return_value == common.Status.RUNNING:
+            return return_value
+        elif return_value == common.Status.SUCCESS and self.idx <= self.tmax:
             return return_value
         elif self.idx > self.tmax:
             return common.Status.FAILURE
-        elif return_value == common.Status.FAILURE:
+        elif return_value == common.Status.FAILURE and self.idx <=self.tmax:
             self.reset()
             return common.Status.RUNNING
         else:
