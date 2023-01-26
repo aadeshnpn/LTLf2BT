@@ -172,17 +172,16 @@ def run_experiment(
     # policy = policy_iteration(env)
     # policy = random_policy()
     # env.display_in_grid(policy)
-    result = []
     results = []
     policies = []
     # mission = '(F (c)) U (F (h))'
     mission = '((F(c)) U (F(h)))'
     parser = LTLfParser()
     mission_formula = parser(mission)
-
     for l in range(runs):
         policy_cheese = dict()
         policy_home = dict()
+        result = []
         for k in range(propsteps):
             # results.append(policy_test(policy, env))
             # print(policy_test_step(policy, env))
@@ -209,32 +208,33 @@ def run_experiment(
             # py_trees.logging.level = py_trees.logging.Level.DEBUG
             for i in range(maxtrace*2):
                 ppamissionbt.tick()
-                print(i, bboard.trace[-1], ppamissionbt.root.status)
+                # print(i, bboard.trace[-1], ppamissionbt.root.status)
                 if (
                     (ppamissionbt.root.status == common.Status.SUCCESS) or
                         (ppamissionbt.root.status == common.Status.FAILURE)):
                     break
             result.append([bboard.trace, ppamissionbt.root.status])
         results.append(result)
-        # policies.append(policy)
-        print(sum([s[-1]==common.Status.SUCCESS for s in result])/propsteps)
+        policies.append((policy_cheese, policy_home))
+        # print(sum([s[-1]==common.Status.SUCCESS for s in result])/propsteps)
 
-        policy = create_policy(policy_cheese)
-        # print(policy)
-        action_dict = {
-            0: (1, 0),
-            1: (0, 1),
-            2: (-1, 0),
-            3: (0, -1)
-        }
-        policy = {state:action_dict[action] for state, action in policy.items()}
-        env.display_in_grid(policy)
-        policy = create_policy(policy_home)
-        policy = {state:action_dict[action] for state, action in policy.items()}
-        print("\n")
-        env.display_in_grid(policy)
+        # policy = create_policy(policy_cheese)
+        # # print(policy)
+        # action_dict = {
+        #     0: (1, 0),
+        #     1: (0, 1),
+        #     2: (-1, 0),
+        #     3: (0, -1)
+        # }
+        # policy = {state:action_dict[action] for state, action in policy.items()}
+        # env.display_in_grid(policy)
+        # policy = create_policy(policy_home)
+        # policy = {state:action_dict[action] for state, action in policy.items()}
+        # print("\n")
+        # env.display_in_grid(policy)
         # print(policy_cheese)
-    print(l, k, [state['state'] for state in bboard.trace], ppamissionbt.root.status)
+    # print(l, k, [state['state'] for state in bboard.trace], ppamissionbt.root.status)
+    # print(mission_formula.truth(bboard.trace))
     return results, policies
 
 
@@ -255,18 +255,18 @@ def experiments_parameters():
         # (0.7, 0.15, 0.15), (0.6, 0.2, 0.2),
         # (0.5, 0.25, 0.25), (0.4, 0.3, 0.3),
         ]
-    discounts = [0.99, 0.95, 0.9, 0.85, 0.8]
+    discounts = [0.99, 0.9, 0.8, 0.7]
 
     tracelens = [10, 15, 20, 25, 30, 40, 50]
-    propsteps = [10, 15, 20, 25, 30, 40, 50]
+    propsteps = [10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100]
 
-    uncertainties = [(0.95, 0.025, 0.025)]
-    discounts = [0.9]
-    rewards = [(-0.04, 2, -2)]
-    tracelens = [25]
-    propsteps = [80]
+    # uncertainties = [(0.95, 0.025, 0.025)]
+    discounts = [0.8, 0.7]
+    # rewards = [(-0.04, 2, -2)]
+    # tracelens = [25]
+    # propsteps = [80]
 
-    runs = 1
+    runs = 50
     results = dict()
     j = 0
     for discount in discounts:
@@ -282,14 +282,15 @@ def experiments_parameters():
                         propsteps=pstep, discount=discount)
                     results[discount][uc][tlen][pstep]['result'] = res
                     results[discount][uc][tlen][pstep]['policy'] = policy
+
+            with open('/tmp/mission_learning_last.pickle', 'wb') as file:
+                pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
+
+            with open('/tmp/mission_learning_last.pickle', 'rb') as file:
+                data = pickle.load(file)
+            print('Experiment Done', len(data))
+
         j += 1
-
-    # with open('/tmp/learning_30.pickle', 'wb') as file:
-    #     pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
-
-    # with open('/tmp/learning_30.pickle', 'rb') as file:
-    #     data = pickle.load(file)
-    # print('Experiment Done', data)
 
 
 def main():

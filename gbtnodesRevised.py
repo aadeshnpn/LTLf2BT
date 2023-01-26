@@ -538,7 +538,7 @@ class Reset(Decorator):
         #  Repeat until logic for decorator
         return_value = self.decorated.status
         self.idx += 1
-        print('From reset', self.idx, self.tmax, return_value)
+        # print('From reset', self.idx, self.tmax, return_value)
         if return_value == common.Status.RUNNING:
             return return_value
         elif return_value == common.Status.SUCCESS and self.idx <= self.tmax:
