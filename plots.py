@@ -28,12 +28,15 @@ def plot_data_reward_power(success_prob, ax_power, i):
         ]
     xrange = range(1, 9)
     # print('plot',success_prob)
-    ax_power.scatter(xrange, success_prob, alpha=0.5, s=40, marker="x")
+    ax_power.scatter(xrange, success_prob, alpha=0.5, s=100, marker="x")
     if i ==0:
-        ax_power.set_ylabel('Success Probability')
-        ax_power.set_xlabel('Uncertainty')
+        ax_power.set_ylabel('Success Probability', fontsize='x-large')
+        ax_power.set_xlabel('Uncertainty', fontsize='x-large' )
     ax_power.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
-    ax_power.set_title(rewards[i])
+    ax_power.set_yticklabels([0.2, 0.4, 0.6, 0.8, 1.0], fontsize='large')
+    ax_power.set_xticks([2, 4, 6, 8])
+    ax_power.set_xticklabels([2, 4, 6, 8], fontsize='large')
+    ax_power.set_title(rewards[i], fontsize='x-large')
 
 
 def plot_data_reward_eff(trace_len, ax_eff, i):
@@ -62,9 +65,13 @@ def plot_data_reward_eff(trace_len, ax_eff, i):
             patch_artist=True, medianprops=medianprops,
             meanprops=meanprops, widths=0.8)
     if i ==0:
-        ax_eff.set_ylabel('Trace Length')
-        ax_eff.set_xlabel('Uncertainty')
-    ax_eff.set_title(rewards[i])
+        ax_eff.set_ylabel('Trace Length', fontsize='x-large')
+        ax_eff.set_xlabel('Uncertainty', fontsize='x-large')
+    ax_eff.set_yticks([5, 10, 15, 20])
+    ax_eff.set_yticklabels([5, 10, 15, 20], fontsize='large')
+    ax_eff.set_xticks(range(1,9))
+    ax_eff.set_xticklabels(range(1,9), fontsize='large')
+    ax_eff.set_title(rewards[i], fontsize='x-large')
 
 
 def get_data_mdp_reward_uncertainty(filename='/tmp/mdp_30.pickle'):
@@ -133,9 +140,13 @@ def plot_mdp_eff(info, fname='mdp_efficiency_30'):
 
 
 def main():
-    info = get_data_mdp_reward_uncertainty(filename='/tmp/mdp_cheese_home.pickle')
-    plot_mdp_power(info,'cheese_home_power')
-    plot_mdp_eff(info, 'cheese_home_efficiency')
+    # info = get_data_mdp_reward_uncertainty(filename='/tmp/mdp_cheese_home.pickle')
+    # plot_mdp_power(info,'cheese_home_power')
+    # plot_mdp_eff(info, 'cheese_home_efficiency')
+
+    info = get_data_mdp_reward_uncertainty(filename='/tmp/mdp_30.pickle')
+    plot_mdp_power(info,'cheese_power')
+    plot_mdp_eff(info, 'cheese_efficiency')
 
 
 if __name__ =='__main__':
