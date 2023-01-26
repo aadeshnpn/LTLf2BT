@@ -230,7 +230,7 @@ def plot_power(
 
 def plot_efficiency(
         datas, tracelen=15, propsteps=25, discount=0.7,
-        fname='resilence_efficiency'):
+        fname='resilence_efficiency', retval=False):
     uncertainties = [
         (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
         (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
@@ -254,33 +254,36 @@ def plot_efficiency(
             info[u]['trace'].append(average_len)
             info[u]['success'].append(success_prob)
 
-    fig_power = plt.figure(figsize=(8, 6), dpi=100)
-    ax_power = fig_power.add_subplot(1, 1, 1)
+    if retval:
+        return info
+    else:
+        fig_power = plt.figure(figsize=(8, 6), dpi=100)
+        ax_power = fig_power.add_subplot(1, 1, 1)
 
-    trace_lens = [info[data]['trace'] for data in info.keys()]
-    medianprops = dict(linewidth=2.5, color='firebrick')
-    meanprops = dict(linewidth=2.5, color='#ff7f0e')
-    bp2 = ax_power.boxplot(
-            trace_lens, 0, 'gD', showmeans=True, meanline=True,
-            patch_artist=True, medianprops=medianprops,
-            meanprops=meanprops, widths=0.3)
-    ax_power.set_ylabel('Trace Length', fontsize='large' )
-    ax_power.set_xlabel('Uncertainty', fontsize='large')
+        trace_lens = [info[data]['trace'] for data in info.keys()]
+        medianprops = dict(linewidth=2.5, color='firebrick')
+        meanprops = dict(linewidth=2.5, color='#ff7f0e')
+        bp2 = ax_power.boxplot(
+                trace_lens, 0, 'gD', showmeans=True, meanline=True,
+                patch_artist=True, medianprops=medianprops,
+                meanprops=meanprops, widths=0.3)
+        ax_power.set_ylabel('Trace Length', fontsize='large' )
+        ax_power.set_xlabel('Uncertainty', fontsize='large')
 
-    ax_power.set_yticks([3, 6, 9, 12, 15])
-    ax_power.set_xticklabels(uncertainties)
-    ax_power.set_title('Resiliency Efficiency')
+        ax_power.set_yticks([3, 6, 9, 12, 15])
+        ax_power.set_xticklabels(uncertainties)
+        ax_power.set_title('Resiliency Efficiency')
 
 
-    plt.tight_layout(pad=0.5)
+        plt.tight_layout(pad=0.5)
 
-    maindir = '/tmp/'
-    # fname = 'mpd_power_30'
+        maindir = '/tmp/'
+        # fname = 'mpd_power_30'
 
-    fig_power.savefig(
-        maindir + '/' + fname + '_'+ str(t)+ '_'+ str(p)+ '.png')
-    # pylint: disable = E1101
-    plt.close(fig_power)
+        fig_power.savefig(
+            maindir + '/' + fname + '_'+ str(t)+ '_'+ str(p)+ '.png')
+        # pylint: disable = E1101
+        plt.close(fig_power)
 
 
 def plot_power_policy_random_startloc(
@@ -473,6 +476,93 @@ def plot_power_cobined(
     plt.close(fig_power)
 
 
+def plot_efficiency_combined(
+        datas, datasr, tracelen=15, propsteps=25, discount=0.7,
+        fname='resilence_efficiency_combined'):
+    uncertainties = [
+        (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
+        (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
+        ]
+    t = tracelen
+    p = propsteps
+    d = discount
+    infor = dict()
+    for u in uncertainties:
+        infor[u] = {'trace':[], 'success':[]}
+        for j in range(len(datasr[u])):
+            results = [d[j][0] for d in datasr[u]]
+            # print(j, [d[j][0] for d in datas[u]])
+            # btstatus = [d[1] for d in datas[u][0]]
+            trace = [d[j][1] for d in datasr[u]]
+            success_prob = round(sum(results) / len(results), 2)
+            trace_len = [len(t) for t in trace]
+            average_len = round(sum(trace_len) / len(results), 2)
+            # print(j, u, success_prob, average_len)
+            infor[u]['trace'].append(average_len)
+            infor[u]['success'].append(success_prob)
+
+    info = plot_efficiency(
+        datas, tracelen=15, propsteps=25, discount=0.7,
+        fname='resilence_efficiency', retval=True)
+    colordict = {
+        0: 'gold',
+        1: 'olivedrab',
+        2: 'orchid',
+        3: 'peru',
+        4: 'linen',
+        5: 'indianred',
+        6: 'tomato'}
+
+    positions = [
+        [1, 2], [4, 5], [7, 8], [10, 11]
+        ]
+
+    fig_power = plt.figure(figsize=(8, 6), dpi=100)
+    ax_power = fig_power.add_subplot(1, 1, 1)
+
+    trace_lens = [info[data]['trace'] for data in info.keys()]
+    trace_lens_rand = [infor[data]['trace'] for data in infor.keys()]
+
+    datas = [
+        [trace_lens[0], trace_lens_rand[0]],
+        [trace_lens[1], trace_lens_rand[1]],
+        [trace_lens[2], trace_lens_rand[2]],
+        [trace_lens[3], trace_lens_rand[3]]
+    ]
+
+    medianprops = dict(linewidth=2.5, color='firebrick')
+    meanprops = dict(linewidth=2.5, color='#ff7f0e')
+    for j in range(len(positions)):
+        bp2 = ax_power.boxplot(
+                datas[j], 0, 'gD', showmeans=True, meanline=True,
+                patch_artist=True, medianprops=medianprops,
+                meanprops=meanprops, widths=0.3, positions=positions[j])
+        for patch, color in zip(bp2['boxes'], colordict.values()):
+            patch.set_facecolor(color)
+
+    ax_power.legend(
+        zip(bp2['boxes']), ['Learning Efficiency', 'Inference Efficiency'],
+        fontsize="large", loc="upper left", title='Efficiency Metric')
+    ax_power.set_ylabel('Trace Length', fontsize='large' )
+    ax_power.set_xlabel('Uncertainty', fontsize='large')
+
+    ax_power.set_yticks([3, 6, 9, 12, 15])
+    ax_power.set_yticklabels([3, 6, 9, 12, 15], fontsize='large')
+    ax_power.set_xticks([1.5, 4.5, 7.5, 10.5])
+    ax_power.set_xticklabels(uncertainties, fontsize='large')
+    ax_power.set_title('Resiliency Efficiency')
+
+    plt.tight_layout(pad=0.5)
+
+    maindir = '/tmp/'
+    # fname = 'mpd_power_30'
+
+    fig_power.savefig(
+        maindir + '/' + fname + '.png')
+    # pylint: disable = E1101
+    plt.close(fig_power)
+
+
 def main():
     # data = get_data()
     # print(len(data))
@@ -500,8 +590,8 @@ def main():
 
     # plot_efficiency_random_start_loc(data_rand)
     # plot_power_policy_random_startloc(data_rand)
-    plot_power_cobined(data, data_rand)
-    # plot_efficiency_combined(data, data_rand)
+    # plot_power_cobined(data, data_rand)
+    plot_efficiency_combined(data, data_rand)
 
 
 if __name__ =='__main__':
