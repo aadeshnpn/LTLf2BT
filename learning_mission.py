@@ -2,7 +2,8 @@ from mdp import (
     GridMDP, create_policy,
     policy_iteration, policy_test,
     policy_test_step, random_policy)
-from gbtnodesRevised import create_PPATask_GBT_learn, parse_ltlf
+from gbtnodesRevised import (
+    create_PPATask_GBT_learn, parse_ltlf, create_PPATask_GBT)
 
 from py_trees import common, blackboard
 from py_trees.trees import BehaviourTree
@@ -131,7 +132,7 @@ class MDPActionNode(Behaviour):
 
 def init_mdp(
         sloc=(3,0), reward = [-0.04, 2, -2],
-        uncertainty=(0.9,0.05,0.05), random=True):
+        uncertainty=(0.9,0.05,0.05), random=False):
     """Initialized a simple MDP world."""
     grid = np.ones((4, 4)) * reward[0]
 
@@ -151,11 +152,12 @@ def init_mdp(
     grid[0][3] = reward[1]
     grid[1][3] = reward[2]
 
-    # while True:
-    #     randloc = tuple(np.random.randint(0, 4, 2).tolist())
-    #     if randloc not in [(3,3), [3,2]]:
-    #         break
-    # sloc = randloc if random else sloc
+    if random:
+        while True:
+            randloc = tuple(np.random.randint(0, 4, 2).tolist())
+            if randloc not in [(3,3), [3,2]]:
+                break
+        sloc = randloc if random else sloc
 
     mdp = GridMDP(
         grid, terminals=[], startloc=sloc,
@@ -165,10 +167,46 @@ def init_mdp(
     return mdp
 
 
+def run_experiment_given_policy(
+        policy, uncertainty, runs=10,
+        maxtrace=50, random=True):
+    env = init_mdp(
+        reward=[-0.04, 2, 2], uncertainty=uncertainty, random=random)
+    mission = '(F (c)) U (F (h))'
+    parser = LTLfParser()
+    mission_formula = parser(mission)
+    results = []
+    policy_cheese = policy[0]
+    policy_home = policy[1]
+    for k in range(runs):
+        # results.append(policy_test(policy, env))
+        # print(policy_test_step(policy, env))
+        env.restart(random=random)
+        bboard = blackboard.Client(name='gbt')
+        bboard.register_key(key='trace', access=common.Access.WRITE)
+        bboard.trace = [env.get_states()]
+        policynode_cheese = MDPActionNode('c', env, policy_cheese, maxtrace)
+        policynode_home = MDPActionNode('h', env, policy_home, maxtrace)
+        ppataskbt_cheese = create_PPATask_GBT('p', 'c', 't', 'g', policynode_cheese)
+        ppataskbt_home = create_PPATask_GBT('c', 'h', 't', 'g', policynode_home)
+        mappings = {'c':ppataskbt_cheese, 'h':ppataskbt_home}
+        gbt = parse_ltlf(mission_formula, mappings, task_max=maxtrace)
+        gbt = BehaviourTree(gbt)
+        for i in range(maxtrace):
+            gbt.tick()
+            # print(bboard.trace[-1]['c'],bboard.trace[-1]['h'], gbt.root.status)
+            if gbt.root.status == common.Status.SUCCESS:
+                break
+        results.append([gbt.root.status==common.Status.SUCCESS, bboard.trace])
+    return results
+
+
 def run_experiment(
         reward, uncertainty, runs=10,
-        maxtrace=30, propsteps=30, discount=0.9):
-    env = init_mdp(reward=reward, uncertainty=uncertainty)
+        maxtrace=30, propsteps=30, discount=0.9,
+        random=False):
+    env = init_mdp(
+        reward=reward, uncertainty=uncertainty, random=random)
     # policy = policy_iteration(env)
     # policy = random_policy()
     # env.display_in_grid(policy)
@@ -232,7 +270,7 @@ def run_experiment(
         # policy = {state:action_dict[action] for state, action in policy.items()}
         # print("\n")
         # env.display_in_grid(policy)
-        # print(policy_cheese)
+       #  print(policy_cheese)
     # print(l, k, [state['state'] for state in bboard.trace], ppamissionbt.root.status)
     # print(mission_formula.truth(bboard.trace))
     return results, policies
@@ -261,12 +299,12 @@ def experiments_parameters():
     propsteps = [10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100]
 
     # uncertainties = [(0.95, 0.025, 0.025)]
-    discounts = [0.8, 0.7]
-    # rewards = [(-0.04, 2, -2)]
-    # tracelens = [25]
-    # propsteps = [80]
+    discounts = [0.9]
+    rewards = [(-0.04, 2, -2)]
+    tracelens = [50]
+    propsteps = [200]
 
-    runs = 50
+    runs = 2
     results = dict()
     j = 0
     for discount in discounts:
@@ -283,18 +321,54 @@ def experiments_parameters():
                     results[discount][uc][tlen][pstep]['result'] = res
                     results[discount][uc][tlen][pstep]['policy'] = policy
 
-            with open('/tmp/mission_learning_last.pickle', 'wb') as file:
-                pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
+            # with open('/tmp/mission_learning_few1.pickle', 'wb') as file:
+            #     pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
 
-            with open('/tmp/mission_learning_last.pickle', 'rb') as file:
-                data = pickle.load(file)
-            print('Experiment Done', len(data))
+            # with open('/tmp/mission_learning_few1.pickle', 'rb') as file:
+            #     data = pickle.load(file)
+            # print('Experiment Done', len(data))
 
         j += 1
 
 
+def run_experiment_with_random_loc():
+    runs = 50
+    tlen = 50
+    pstep = 200
+    discount = 0.9
+    rewards = [(-0.04, 2, -2)]
+    uncertainties = [(0.95, 0.025, 0.025)]
+    res, policy = run_experiment(
+        rewards[0], uncertainties[0], runs, maxtrace=tlen,
+        propsteps=pstep, discount=discount, random=False)
+
+    # print(res)
+    results = {}
+    uncertainties = [
+        (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
+        (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
+        ]
+    for j in range(len(res)):
+        for u in uncertainties:
+            results[u] = results.get(u, [])
+            # print(res[j][-1][1])
+            if res[j][-1][1] == common.Status.SUCCESS:
+                results[u].append(
+                    run_experiment_given_policy(
+                        policy[j], u, runs=50, maxtrace=50, random=True))
+
+    with open('/tmp/mission_test_randomstart.pickle', 'wb') as file:
+        pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
+
+    with open('/tmp/mission_test_randomstart.pickle', 'rb') as file:
+        data = pickle.load(file)
+
+    print('Experiment Done', len(data))
+
+
 def main():
-    experiments_parameters()
+    # experiments_parameters()
+    run_experiment_with_random_loc()
 
 
 if __name__ =='__main__':

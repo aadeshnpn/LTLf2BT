@@ -112,7 +112,7 @@ def plot_trace_len(trace_len, ax_eff, i):
     medianprops = dict(linewidth=2.5, color='firebrick')
     meanprops = dict(linewidth=2.5, color='#ff7f0e')
     bp2 = ax_eff.boxplot(
-            trace_len, 0, 'gD', showmeans=True, meanline=True,
+            trace_len, 0, sym='', showmeans=True, meanline=True,
             patch_artist=True, medianprops=medianprops,
             meanprops=meanprops, widths=0.8)
     if i ==0:
@@ -203,7 +203,7 @@ def plot_arms_paper(info, fname='cheese_home'):
         plot_trace_len(info[reward]['trace'], ax_eff, i)
         i = i+1
 
-    plt.tight_layout(pad=0.9)
+    plt.tight_layout(pad=0.5)
     maindir = '/tmp/'
     # fname = 'mpd_efficiency_30'
     fig.savefig(

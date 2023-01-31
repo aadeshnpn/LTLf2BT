@@ -270,10 +270,9 @@ def plot_efficiency(
         ax_power.set_ylabel('Trace Length', fontsize='large' )
         ax_power.set_xlabel('Uncertainty', fontsize='large')
 
-        ax_power.set_yticks([3, 6, 9, 12, 15])
+        ax_power.set_yticks([10,20,30,40,50])
         ax_power.set_xticklabels(uncertainties)
         ax_power.set_title('Resiliency Efficiency')
-
 
         plt.tight_layout(pad=0.5)
 
@@ -288,7 +287,7 @@ def plot_efficiency(
 
 def plot_power_policy_random_startloc(
         datas, tracelen=15, propsteps=25, discount=0.7,
-        fname='resilence_power_randomloc'):
+        fname='mission_power_randomloc'):
     uncertainties = [
         (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
         (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
@@ -342,7 +341,7 @@ def plot_power_policy_random_startloc(
 
 def plot_efficiency_random_start_loc(
         datas, tracelen=15, propsteps=25, discount=0.7,
-        fname='resilence_efficiency_random_loc'):
+        fname='mission_eff_random_loc'):
     uncertainties = [
         (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
         (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
@@ -395,7 +394,7 @@ def plot_efficiency_random_start_loc(
 
 def plot_power_cobined(
         datas, datasr, tracelen=15, propsteps=25, discount=0.7,
-        fname='resilence_power_combined'):
+        fname='resilence_power_combined',ax=None):
     uncertainties = [
         (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
         (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
@@ -432,8 +431,7 @@ def plot_power_cobined(
     positions = [
         [1, 2], [4, 5], [7, 8], [10, 11]
         ]
-    fig_power = plt.figure(figsize=(8, 6), dpi=100)
-    ax_power = fig_power.add_subplot(1, 1, 1)
+    ax_power = ax
 
     success_probs_rand = [infor[data]['success'] for data in infor.keys()]
     success_probs = [info[data]['success'] for data in info.keys()]
@@ -456,29 +454,29 @@ def plot_power_cobined(
             patch.set_facecolor(color)
 
     ax_power.legend(
-        zip(bp2['boxes']), ['Learning Power', 'Inference Power'], fontsize="large", loc="center", title='Power Metric')
+        zip(bp2['boxes']), ['Learning Phase', 'Inference Phase'], fontsize="large", loc="lower left")
     ax_power.set_ylabel('Success Probability', fontsize='large' )
     ax_power.set_xlabel('Uncertainty', fontsize='large')
     ax_power.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
     ax_power.set_yticklabels([0.2, 0.4, 0.6, 0.8, 1.0], fontsize='large')
     ax_power.set_xticks([1.5, 4.5, 7.5, 10.5])
-    ax_power.set_xticklabels(uncertainties, fontsize='large')
-    ax_power.set_title('Resiliency Power')
+    ax_power.set_xticklabels([1, 2, 3, 4], fontsize='large')
+    # ax_power.set_title('Resiliency Power')
 
-    plt.tight_layout(pad=0.5)
+    # plt.tight_layout(pad=0.5)
 
-    maindir = '/tmp/'
-    # fname = 'mpd_power_30'
+    # maindir = '/tmp/'
+    # # fname = 'mpd_power_30'
 
-    fig_power.savefig(
-        maindir + '/' + fname + '_'+ str(t)+ '_'+ str(p)+ '.png')
-    # pylint: disable = E1101
-    plt.close(fig_power)
+    # fig_power.savefig(
+    #     maindir + '/' + fname + '_'+ str(t)+ '_'+ str(p)+ '.png')
+    # # pylint: disable = E1101
+    # plt.close(fig_power)
 
 
 def plot_efficiency_combined(
         datas, datasr, tracelen=15, propsteps=25, discount=0.7,
-        fname='resilence_efficiency_combined'):
+        fname='resilence_efficiency_combined',ax=None):
     uncertainties = [
         (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
         (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
@@ -517,8 +515,9 @@ def plot_efficiency_combined(
         [1, 2], [4, 5], [7, 8], [10, 11]
         ]
 
-    fig_power = plt.figure(figsize=(8, 6), dpi=100)
-    ax_power = fig_power.add_subplot(1, 1, 1)
+    # fig_power = plt.figure(figsize=(8, 6), dpi=100)
+    # ax_power = fig_power.add_subplot(1, 1, 1)
+    ax_power = ax
 
     trace_lens = [info[data]['trace'] for data in info.keys()]
     trace_lens_rand = [infor[data]['trace'] for data in infor.keys()]
@@ -536,24 +535,41 @@ def plot_efficiency_combined(
         bp2 = ax_power.boxplot(
                 datas[j], 0, 'gD', showmeans=True, meanline=True,
                 patch_artist=True, medianprops=medianprops,
-                meanprops=meanprops, widths=0.3, positions=positions[j])
+                meanprops=meanprops, widths=0.8, positions=positions[j])
         for patch, color in zip(bp2['boxes'], colordict.values()):
             patch.set_facecolor(color)
 
-    ax_power.legend(
-        zip(bp2['boxes']), ['Learning Efficiency', 'Inference Efficiency'],
-        fontsize="large", loc="upper left", title='Efficiency Metric')
+    # ax_power.legend(
+    #     zip(bp2['boxes']), ['Learning Efficiency', 'Inference Efficiency'],
+    #     fontsize="large", loc="upper left", title='Efficiency Metric')
     ax_power.set_ylabel('Trace Length', fontsize='large' )
     ax_power.set_xlabel('Uncertainty', fontsize='large')
 
     ax_power.set_yticks([3, 6, 9, 12, 15])
     ax_power.set_yticklabels([3, 6, 9, 12, 15], fontsize='large')
     ax_power.set_xticks([1.5, 4.5, 7.5, 10.5])
-    ax_power.set_xticklabels(uncertainties, fontsize='large')
-    ax_power.set_title('Resiliency Efficiency')
+    ax_power.set_xticklabels([1,2,3,4], fontsize='large')
+    # ax_power.set_title('Resiliency Efficiency')
+
+    # plt.tight_layout(pad=0.5)
+
+    # maindir = '/tmp/'
+    # # fname = 'mpd_power_30'
+
+    # fig_power.savefig(
+    #     maindir + '/' + fname + '.png')
+    # # pylint: disable = E1101
+    # plt.close(fig_power)
+
+
+def combine_plots(data, data_rand, fname='learning_cheese_home'):
+    fig_power = plt.figure(figsize=(6, 4), dpi=100)
+    ax_power = fig_power.add_subplot(1, 2, 1)
+    ax_eff = fig_power.add_subplot(1, 2, 2)
+    plot_power_cobined(data, data_rand, ax=ax_power)
+    plot_efficiency_combined(data, data_rand, ax=ax_eff)
 
     plt.tight_layout(pad=0.5)
-
     maindir = '/tmp/'
     # fname = 'mpd_power_30'
 
@@ -585,13 +601,38 @@ def main():
     # plot_power(data)
     # plot_efficiency(data)
 
-    data_rand = get_data(filename='/tmp/resilence_test_randomstart.pickle')
-    data = get_data(filename='/tmp/learning_30_all.pickle')
+    # data_rand = get_data(filename='/tmp/resilence_test_randomstart.pickle')
+    # data = get_data(filename='/tmp/learning_30_all.pickle')
 
     # plot_efficiency_random_start_loc(data_rand)
     # plot_power_policy_random_startloc(data_rand)
+
     # plot_power_cobined(data, data_rand)
-    plot_efficiency_combined(data, data_rand)
+    # plot_efficiency_combined(data, data_rand)
+
+    # combine_plots(data, data_rand)
+
+    # data1 = get_data(filename='/tmp/mission_learning.pickle')
+    # data2 = get_data(filename='/tmp/mission_learning_last.pickle')
+    # data = {**data1, **data2}
+    # del data1
+    # del data2
+    # data = get_data(filename='/tmp/mission_learning_few1.pickle')
+    # tracelens = [50]
+    # propsteps = [180, 200]
+    # for t in tracelens:
+    #     for p in propsteps:
+    #         plot_power(
+    #             data, tracelen=t, propsteps=p, discount=0.9,
+    #             fname='mission_learning_power_')
+    #         plot_efficiency(
+    #             data, tracelen=t, propsteps=p, discount=0.9,
+    #             fname='mission_learning_eff_')
+
+    data_rand = get_data(filename='/tmp/mission_test_randomstart.pickle')
+    print(data_rand)
+    plot_efficiency_random_start_loc(data_rand)
+    plot_power_policy_random_startloc(data_rand)
 
 
 if __name__ =='__main__':
