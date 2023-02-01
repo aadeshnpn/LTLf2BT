@@ -416,7 +416,8 @@ def plot_power_cobined(
             infor[u]['success'].append(success_prob)
 
     # For Learning
-    info = plot_power(datas, tracelen=15, propsteps=25, discount=0.7,
+    info = plot_power(
+        datas, tracelen=tracelen, propsteps=propsteps, discount=discount,
         fname='resilence_power', retval=True)
 
     colordict = {
@@ -447,14 +448,14 @@ def plot_power_cobined(
 
     for j in range(len(positions)):
         bp2 = ax_power.boxplot(
-                datas[j], 0, 'gD', showmeans=True, meanline=True,
+                datas[j], 0, '', showmeans=True, meanline=True,
                 patch_artist=True, medianprops=medianprops,
                 meanprops=meanprops, widths=0.8, positions=positions[j])
         for patch, color in zip(bp2['boxes'], colordict.values()):
             patch.set_facecolor(color)
 
     ax_power.legend(
-        zip(bp2['boxes']), ['Learning Phase', 'Inference Phase'], fontsize="large", loc="lower left")
+        zip(bp2['boxes']), ['Learning', 'Inference'], fontsize="large", loc="lower left")
     ax_power.set_ylabel('Success Probability', fontsize='large' )
     ax_power.set_xlabel('Uncertainty', fontsize='large')
     ax_power.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
@@ -500,7 +501,7 @@ def plot_efficiency_combined(
             infor[u]['success'].append(success_prob)
 
     info = plot_efficiency(
-        datas, tracelen=15, propsteps=25, discount=0.7,
+        datas, tracelen=tracelen, propsteps=propsteps, discount=discount,
         fname='resilence_efficiency', retval=True)
     colordict = {
         0: 'gold',
@@ -533,7 +534,7 @@ def plot_efficiency_combined(
     meanprops = dict(linewidth=2.5, color='#ff7f0e')
     for j in range(len(positions)):
         bp2 = ax_power.boxplot(
-                datas[j], 0, 'gD', showmeans=True, meanline=True,
+                datas[j], 0, '', showmeans=True, meanline=True,
                 patch_artist=True, medianprops=medianprops,
                 meanprops=meanprops, widths=0.8, positions=positions[j])
         for patch, color in zip(bp2['boxes'], colordict.values()):
@@ -545,8 +546,8 @@ def plot_efficiency_combined(
     ax_power.set_ylabel('Trace Length', fontsize='large' )
     ax_power.set_xlabel('Uncertainty', fontsize='large')
 
-    ax_power.set_yticks([3, 6, 9, 12, 15])
-    ax_power.set_yticklabels([3, 6, 9, 12, 15], fontsize='large')
+    ax_power.set_yticks([10,20,30,40,50])
+    ax_power.set_yticklabels([10,20,30,40,50], fontsize='large')
     ax_power.set_xticks([1.5, 4.5, 7.5, 10.5])
     ax_power.set_xticklabels([1,2,3,4], fontsize='large')
     # ax_power.set_title('Resiliency Efficiency')
@@ -566,8 +567,10 @@ def combine_plots(data, data_rand, fname='learning_cheese_home'):
     fig_power = plt.figure(figsize=(6, 4), dpi=100)
     ax_power = fig_power.add_subplot(1, 2, 1)
     ax_eff = fig_power.add_subplot(1, 2, 2)
-    plot_power_cobined(data, data_rand, ax=ax_power)
-    plot_efficiency_combined(data, data_rand, ax=ax_eff)
+    plot_power_cobined(
+        data, data_rand, tracelen=50, propsteps=200, discount=0.9, ax=ax_power)
+    plot_efficiency_combined(
+        data, data_rand, tracelen=50, propsteps=200, discount=0.9, ax=ax_eff)
 
     plt.tight_layout(pad=0.5)
     maindir = '/tmp/'
@@ -629,10 +632,15 @@ def main():
     #             data, tracelen=t, propsteps=p, discount=0.9,
     #             fname='mission_learning_eff_')
 
+    # data_rand = get_data(filename='/tmp/mission_test_randomstart.pickle')
+    # print(data_rand)
+    # plot_efficiency_random_start_loc(data_rand)
+    # plot_power_policy_random_startloc(data_rand)
+    data = get_data(filename='/tmp/mission_learning_few1.pickle')
+    # print(data.keys())
     data_rand = get_data(filename='/tmp/mission_test_randomstart.pickle')
-    print(data_rand)
-    plot_efficiency_random_start_loc(data_rand)
-    plot_power_policy_random_startloc(data_rand)
+    # print(data_rand.keys())
+    combine_plots(data, data_rand)
 
 
 if __name__ =='__main__':
