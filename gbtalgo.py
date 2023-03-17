@@ -1,5 +1,7 @@
 """Algorithm to create GBT given a goal specification."""
-from flloat.ltlf import LTLfAlways, LTLfAnd, LTLfEventually, LTLfNext, LTLfNot, LTLfOr, LTLfUntil
+from flloat.ltlf import (
+    LTLfAlways, LTLfAnd, LTLfEventually, LTLfNext,
+    LTLfNot, LTLfOr, LTLfUntil)
 from flloat.parser.ltlf import LTLfParser, LTLfAtomic
 
 from py_trees.composites import Sequence, Selector, Parallel
@@ -25,7 +27,6 @@ class PropConditionNode(Behaviour):
         """Init method for the condition node."""
         super(PropConditionNode, self).__init__(name)
         self.proposition_symbol = name
-
 
     # def setup(self, timeout, value=False):
     def setup(self, timeout, trace, i=0):

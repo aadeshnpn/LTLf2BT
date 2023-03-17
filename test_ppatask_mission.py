@@ -34,6 +34,7 @@ def get_trace_postcond_true():
     ]
     return trace
 
+
 def get_trace_postcond_false():
     # pre-condition: a
     # post-condition: b

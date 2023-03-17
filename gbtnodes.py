@@ -554,7 +554,6 @@ class PPATaskNode(Behaviour):
         self.name = name
         self.id = 0
 
-
     # def setup(self, timeout, value=False):
     def setup(self, timeout, trace, i=0):
         """Have defined the setup method.
