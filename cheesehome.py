@@ -238,6 +238,10 @@ def experiments_parameters():
         (-0.04, 2, -1), (-0.04, 2, -0.5),
         (-0.04, 2, -0.1), (-0.04, 5, -5),
         ]
+    rewards = [
+        (-0.5, 2, -2), (-0.04, 10, -2),
+        (-0.04, 2, -10), (-0.04, 0.1, -2)
+    ]
     uncertainties = [
         (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
         (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
@@ -261,7 +265,7 @@ def experiments_parameters():
 
     with open('/tmp/mdp_cheese_home.pickle', 'rb') as file:
         data = pickle.load(file)
-    print('Experiment Done', len(data))
+    print('Experiment Done', len(data.keys()))
 
 
 def main():

@@ -20,16 +20,17 @@ class ConditionNode(Behaviour):
     behavior implements the condition node for the atomic LTLf propositions.
     """
 
-    def __init__(self, name):
+    def __init__(self, name, env=None):
         """Init method for the condition node."""
         super(ConditionNode, self).__init__(name)
         self.proposition_symbol = name
         self.blackboard = blackboard.Client(name='gbt')
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
         # common.Name.AUTO_GENERATED
+        self.env = env
 
     # def setup(self, timeout, value=False):
-    def setup(self, timeout, index=0):
+    def setup(self, **kwargs):
         """Have defined the setup method.
 
         This method defines the other objects required for the
@@ -38,17 +39,14 @@ class ConditionNode(Behaviour):
         timeout: property from Behavior super class. Not required
         index: index of the trace. Not required
         """
-        self.index = index
+        pass
 
     def initialise(self):
         """Everytime initialization. Not required for now."""
         pass
 
-    def reset(self, i=0):
-        self.index = i
-
-    def increment(self):
-        self.index += 1
+    def reset(self, **kwargs):
+        pass
 
     def update(self):
         """
@@ -64,7 +62,8 @@ class ConditionNode(Behaviour):
         #     self.name, self.proposition_symbol, self.blackboard.trace[-1],
         #     self.blackboard.trace[-1][self.proposition_symbol])
         try:
-            if self.blackboard.trace[-1][self.proposition_symbol]:
+            if self.env.get_states()[self.proposition_symbol]:
+            # if self.blackboard.trace[-1][self.proposition_symbol]:
                 return_value = common.Status.SUCCESS
             else:
                 return_value = common.Status.FAILURE
@@ -90,15 +89,13 @@ class Globally(Decorator):
             name : the decorator name
         """
         super(Globally, self).__init__(name=name, child=child)
-        self.idx = 0
         self.memory = common.Status.SUCCESS
 
-    def reset(self, i=0):
+    def reset(self, **kwargs):
         self.memory = common.Status.SUCCESS
 
-
-    def setup(self, timeout, i=0):
-        self.decorated.setup(0, self.idx)
+    def setup(self, **kwargs):
+        pass
 
     def update(self):
         """
@@ -128,16 +125,15 @@ class PreCond(Decorator):
             name : the decorator name
         """
         super(PreCond, self).__init__(name=name, child=child)
-        self.idx = 0
         self.memory = common.Status.SUCCESS
+        self.first = True
 
-    def reset(self, i=0):
+    def reset(self, **kwargs):
         self.memory = common.Status.SUCCESS
-        self.idx = 0
+        self.first = True
 
-
-    def setup(self, timeout, i=0):
-        self.decorated.setup(0, self.idx)
+    def setup(self, **kwargs):
+        pass
 
     def update(self):
         """
@@ -147,11 +143,11 @@ class PreCond(Decorator):
         #  Repeat until logic for decorator
         return_value = self.decorated.status
         # print(self.decorated.name, return_value, self.idx, self.memory)
-        if (self.idx ==0 and return_value == common.Status.SUCCESS):
+        if (self.first and return_value == common.Status.SUCCESS):
             self.memory = common.Status.SUCCESS
-        elif (self.idx ==0 and return_value == common.Status.FAILURE):
+        elif (self.first and return_value == common.Status.FAILURE):
             self.memory = common.Status.FAILURE
-        self.idx += 1
+        self.first = False
         return self.memory
 
 
@@ -170,15 +166,13 @@ class TaskCnstr(Decorator):
             name : the decorator name
         """
         super(TaskCnstr, self).__init__(name=name, child=child)
-        self.idx = 0
-        self.memory = common.Status.FAILURE
+        self.previous = common.Status.SUCCESS
 
-    def reset(self, i=0):
-        self.memory = common.Status.FAILURE
+    def reset(self, **kwargs):
+        self.previous = common.Status.SUCCESS
 
-
-    def setup(self, timeout, i=0):
-        self.decorated.setup(0, self.idx)
+    def setup(self, **kwargs):
+        pass
 
     def update(self):
         """
@@ -187,21 +181,9 @@ class TaskCnstr(Decorator):
         """
         #  Repeat until logic for decorator
         child_status = self.decorated.status
-        # print('taskcnstr', child_status, self.idx)
-        if self.idx ==0:
-            return_value =  common.Status.SUCCESS
-        elif (self.idx > 0 and self.memory == common.Status.FAILURE):
-            return_value = common.Status.FAILURE
-        elif (self.idx > 0 and self.memory == common.Status.SUCCESS):
-            return_value = common.Status.SUCCESS
 
-        if self.idx > 0 and self.memory == common.Status.FAILURE:
-            pass
-        else:
-            self.memory = child_status
-
-        self.idx += 1
-        # print('taskcnstr', child_status, self.idx, return_value)
+        return_value = self.previous
+        self.previous = child_status
         return return_value
 
 
@@ -223,7 +205,7 @@ class ActionNode(Behaviour):
         self.index = 0
         self.task_max = task_max
 
-    def setup(self, timeout, trace=None, i=0):
+    def setup(self, **kwargs):
         """Have defined the setup method.
 
         This method defines the other objects required for the
@@ -234,17 +216,14 @@ class ActionNode(Behaviour):
         value: A dict object with key as the proposition symbol and
                boolean value as values. Supplied by trace.
         """
-        self.index = i
+        pass
 
     def initialise(self):
         """Everytime initialization. Not required for now."""
         pass
 
-    def reset(self, i=0):
-        self.index = i
-
-    def increment(self):
-        self.index += 1
+    def reset(self, **kwargs):
+        self.index = 0
 
     def update(self):
         """
@@ -255,7 +234,7 @@ class ActionNode(Behaviour):
         self.env.step()
         self.index += 1
         self.blackboard.trace.append(self.env.curr_state)
-        curr_symbol_truth_value = self.blackboard.trace[-1][self.action_symbol]
+        curr_symbol_truth_value = self.env.curr_state[self.action_symbol]
         # print('action node',self.name, self.index, self.task_max, self.blackboard.trace[-1])
         if  curr_symbol_truth_value and self.index <= self.task_max:
             return common.Status.SUCCESS
@@ -389,10 +368,10 @@ def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
     task_seq = Sequence('sigma_task', memory=False)
     until_seq = Sequence('sigma_until', memory=False)
     action_seq = Parallel('sigma_action')
-    precond_node  = ConditionNode(precond)
-    postcond_node  = ConditionNode(postcond)
-    taskcnstr_node  = ConditionNode(taskcnstr)
-    gblcnstr_node  = ConditionNode(gblcnstr)
+    precond_node  = ConditionNode(precond,  env=action_node.env)
+    postcond_node  = ConditionNode(postcond, env=action_node.env)
+    taskcnstr_node  = ConditionNode(taskcnstr, env=action_node.env)
+    gblcnstr_node  = ConditionNode(gblcnstr, env=action_node.env)
     gblcnstr_decorator_1 = Globally(gblcnstr_node)
     gblcnstr_decorator_2 = copy.copy(gblcnstr_decorator_1)
     gblcnstr_decorator_3 = copy.copy(gblcnstr_decorator_1)
@@ -417,6 +396,7 @@ def create_PPATask_GBT_learn(
     return learner
 
 
+################Mission Operators######################################
 # Just a simple decorator node that implements Finally mission operator
 class Finally(Decorator):
     """Decorator node for the Finally operator.
@@ -424,7 +404,7 @@ class Finally(Decorator):
     Inherits the Decorator class from py_trees. This
     behavior implements the Finally LTLf operator.
     """
-    def __init__(self, child, name=common.Name.AUTO_GENERATED, task_max=4):
+    def __init__(self, child, name=common.Name.AUTO_GENERATED, task_max=2):
         """
         Init with the decorated child.
 
@@ -433,16 +413,22 @@ class Finally(Decorator):
             name : the decorator name
         """
         super(Finally, self).__init__(name=name, child=child)
-        self.idx = 0
         self.memory = common.Status.SUCCESS
         self.task_max = task_max
+        self.idx = 0
 
-    def reset(self, i=0):
+    def reset(self, **kwargs):
         self.memory = common.Status.SUCCESS
+        def reset(children, **kwargs):
+            for child in children:
+                try:
+                    child.reset(**kwargs)
+                except AttributeError:
+                    reset(child.children, **kwargs)
+        reset(self.children, **kwargs)
 
-
-    def setup(self, timeout, i=0):
-        self.decorated.setup(0, self.idx)
+    def setup(self, **kwargs):
+        pass
 
     def update(self):
         """
@@ -456,16 +442,11 @@ class Finally(Decorator):
             return common.Status.RUNNING
         elif return_value == common.Status.FAILURE:
             # Reset all child decorator nodes and return running
-            def reset(children, i):
-                for child in children:
-                    try:
-                        child.reset(i)
-                    except AttributeError:
-                        reset(child.children, i)
-            reset(self.children, 0)
+            self.reset()
             if self.idx > self.task_max:
                 return common.Status.FAILURE
-            return common.Status.RUNNING
+            else:
+                return common.Status.RUNNING
         return self.memory
 
 
@@ -485,15 +466,20 @@ class Until(Decorator):
             name : the decorator name
         """
         super(Until, self).__init__(name=name, child=child)
-        self.idx = 0
-        self.memory = common.Status.SUCCESS
+        self.first = common.Status.SUCCESS
 
-    def reset(self, i=0):
-        self.memory = common.Status.SUCCESS
+    def reset(self, **kwargs):
+        self.first = common.Status.SUCCESS
+        def reset(children, **kwargs):
+            for child in children:
+                try:
+                    child.reset(**kwargs)
+                except AttributeError:
+                    reset(child.children, **kwargs)
+        reset(self.children, **kwargs)
 
-
-    def setup(self, timeout, i=0):
-        self.decorated.setup(0, self.idx)
+    def setup(self, **kwargs):
+        pass
 
     def update(self):
         """
@@ -501,22 +487,13 @@ class Until(Decorator):
         This returns the Until operator status
         """
         #  Repeat until logic for decorator
-        return_value = self.decorated.status
         if self.decorated.status == common.Status.RUNNING:
             return self.decorated.status
         else:
-            self.idx += 1
-        if self.idx ==0:
-            self.memory = return_value
-            return common.Status.SUCCESS
-        elif (self.idx >0 and self.memory == common.Status.SUCCESS):
-            pass
-        elif (self.idx >0 and self.memory == common.Status.FAILURE):
-            return common.Status.FAILURE
-        if return_value == common.Status.FAILURE:
-            self.memory = common.Status.FAILURE
-        self.idx += 1
-        return self.memory
+            return_value = self.first
+            self.first = self.decorated.status
+            # print('Until', return_value, self.first)
+            return return_value
 
 
 # Just a simple decorator node that implements Reset Decorator
@@ -526,7 +503,7 @@ class Reset(Decorator):
     Inherits the Decorator class from py_trees. This
     behavior implements the Reset Decorator.
     """
-    def __init__(self, child, name=common.Name.AUTO_GENERATED, tmax=20):
+    def __init__(self, child, name=common.Name.AUTO_GENERATED, tmax=2):
         """
         Init with the decorated child.
 
@@ -539,12 +516,19 @@ class Reset(Decorator):
         self.memory = common.Status.SUCCESS
         self.tmax = tmax
 
-    def reset(self, i=0):
+    def reset(self, **kwargs):
         self.memory = common.Status.SUCCESS
+        # self.idx = 0
+        def reset(children, **kwargs):
+            for child in children:
+                try:
+                    child.reset(**kwargs)
+                except AttributeError:
+                    reset(child.children, **kwargs)
+        reset(self.children, **kwargs)
 
-
-    def setup(self, timeout, i=0):
-        self.decorated.setup(0, self.idx)
+    def setup(self):
+        self.decorated.setup()
 
     def update(self):
         """
@@ -554,15 +538,18 @@ class Reset(Decorator):
         #  Repeat until logic for decorator
         return_value = self.decorated.status
         self.idx += 1
-        if return_value == common.Status.SUCCESS and self.idx <= self.tmax:
+        # print('From reset', self.idx, self.tmax, return_value)
+        if return_value == common.Status.RUNNING:
             return return_value
-        elif return_value == common.Status.FAILURE:
-            self.decorated.reset()
-            return common.Status.RUNNING
+        elif return_value == common.Status.SUCCESS and self.idx <= self.tmax:
+            return return_value
         elif self.idx > self.tmax:
             return common.Status.FAILURE
-        else:
+        elif return_value == common.Status.FAILURE and self.idx <=self.tmax:
+            self.reset()
             return common.Status.RUNNING
+        else:
+            return common.Status.FAILURE
 
 
 class PPATaskNode(Behaviour):
@@ -576,6 +563,7 @@ class PPATaskNode(Behaviour):
         super(PPATaskNode, self).__init__(name)
         self.name = name
         self.id = 0
+
 
     # def setup(self, timeout, value=False):
     def setup(self, timeout, trace, i=0):

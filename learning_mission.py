@@ -1,9 +1,9 @@
-from inspect import trace
 from mdp import (
     GridMDP, create_policy,
     policy_iteration, policy_test,
-    random_policy)
-from gbtnodes import create_PPATask_GBT_learn, create_PPATask_GBT
+    policy_test_step, random_policy)
+from gbtnodesRevised import (
+    create_PPATask_GBT_learn, parse_ltlf, create_PPATask_GBT)
 
 from py_trees import common, blackboard
 from py_trees.trees import BehaviourTree
@@ -11,6 +11,8 @@ from py_trees.behaviour import Behaviour
 import py_trees
 import numpy as np
 import pickle
+from flloat.parser.ltlf import LTLfParser
+from scipy import stats as st
 
 
 class MDPActionNode(Behaviour):
@@ -75,10 +77,11 @@ class MDPActionNode(Behaviour):
                         zip(self.actionsidx, p))
 
     def get_action(self, state):
-        return self.nprandom.choice(
+       return self.nprandom.choice(
             self.actionsidx,
             p=list(self.gtable[state].values())
             )
+       # return st.mode(actions)[0][0]
 
     def env_action_dict(self, action):
         action_dict = {
@@ -103,11 +106,11 @@ class MDPActionNode(Behaviour):
         #         break
         # return trace
         # print('Planner', self.planner)
-        state = self.curr_loc
+        state = self.env.curr_loc
         if self.gtable.get(state, None) is None:
             self.create_gtable_indv(state)
         action = self.get_action(state)
-
+        # print('state action pair:',state, action)
         curr_loc, curr_reward, done, state = self.env.step(
             self.env_action_dict(action))
         self.index += 1
@@ -129,7 +132,7 @@ class MDPActionNode(Behaviour):
 
 def init_mdp(
         sloc=(3,0), reward = [-0.04, 2, -2],
-        uncertainty=(0.9,0.05,0.05), random=True):
+        uncertainty=(0.9,0.05,0.05), random=False):
     """Initialized a simple MDP world."""
     grid = np.ones((4, 4)) * reward[0]
 
@@ -157,107 +160,120 @@ def init_mdp(
         sloc = randloc if random else sloc
 
     mdp = GridMDP(
-        grid, terminals=[(3,3), (3,2)], startloc=sloc,
+        grid, terminals=[], startloc=sloc,
         uncertainty=uncertainty
         )
 
     return mdp
 
 
+def run_experiment_given_policy(
+        policy, uncertainty, runs=10,
+        maxtrace=50, random=True):
+    env = init_mdp(
+        reward=[-0.04, 2, 2], uncertainty=uncertainty, random=random)
+    mission = '(F (c)) U (F (h))'
+    parser = LTLfParser()
+    mission_formula = parser(mission)
+    results = []
+    policy_cheese = policy[0]
+    policy_home = policy[1]
+    for k in range(runs):
+        # results.append(policy_test(policy, env))
+        # print(policy_test_step(policy, env))
+        env.restart(random=random)
+        bboard = blackboard.Client(name='gbt')
+        bboard.register_key(key='trace', access=common.Access.WRITE)
+        bboard.trace = [env.get_states()]
+        policynode_cheese = MDPActionNode('c', env, policy_cheese, maxtrace)
+        policynode_home = MDPActionNode('h', env, policy_home, maxtrace)
+        ppataskbt_cheese = create_PPATask_GBT('p', 'c', 't', 'g', policynode_cheese)
+        ppataskbt_home = create_PPATask_GBT('c', 'h', 't', 'g', policynode_home)
+        mappings = {'c':ppataskbt_cheese, 'h':ppataskbt_home}
+        gbt = parse_ltlf(mission_formula, mappings, task_max=maxtrace)
+        gbt = BehaviourTree(gbt)
+        for i in range(maxtrace):
+            gbt.tick()
+            # print(bboard.trace[-1]['c'],bboard.trace[-1]['h'], gbt.root.status)
+            if gbt.root.status == common.Status.SUCCESS:
+                break
+        results.append([gbt.root.status==common.Status.SUCCESS, bboard.trace])
+    return results
+
+
 def run_experiment(
         reward, uncertainty, runs=10,
-        maxtrace=30, propsteps=30, discount=0.9, random=True):
+        maxtrace=30, propsteps=30, discount=0.9,
+        random=False):
     env = init_mdp(
         reward=reward, uncertainty=uncertainty, random=random)
     # policy = policy_iteration(env)
     # policy = random_policy()
     # env.display_in_grid(policy)
-    policies = []
     results = []
+    policies = []
+    # mission = '(F (c)) U (F (h))'
+    mission = '((F(c)) U (F(h)))'
+    parser = LTLfParser()
+    mission_formula = parser(mission)
     for l in range(runs):
+        policy_cheese = dict()
+        policy_home = dict()
         result = []
-        policy = dict()
         for k in range(propsteps):
             # results.append(policy_test(policy, env))
             # print(policy_test_step(policy, env))
-            env.restart(random=random)
+            env.restart(random=False)
             bboard = blackboard.Client(name='gbt')
             bboard.register_key(key='trace', access=common.Access.WRITE)
             bboard.trace = [env.get_states()]
             # print(k, policy)
-            policynode = MDPActionNode(
-                'c', env, policy, maxtrace, discount=discount)
-            ppataskbt = create_PPATask_GBT_learn('p', 'c', 't', 'g', policynode)
-            ppataskbt = BehaviourTree(ppataskbt)
-            # print(py_trees.display.ascii_tree(ppataskbt.root))
+            policynode_cheese = MDPActionNode(
+                'c', env, policy_cheese, maxtrace, discount=discount)
+            policynode_home = MDPActionNode(
+                'h', env, policy_home, maxtrace, discount=discount)
+            ppataskbt_cheese = create_PPATask_GBT_learn(
+                'p', 'c', 't', 'g', policynode_cheese)
+            ppataskbt_home = create_PPATask_GBT_learn(
+                'c', 'h', 't', 'g', policynode_home)
+            mappings = {'c':ppataskbt_cheese, 'h':ppataskbt_home}
+            gbt = parse_ltlf(
+                mission_formula, mappings, task_max=maxtrace)
+            ppamissionbt = BehaviourTree(gbt)
+            # ppamissionbt = BehaviourTree(ppataskbt_cheese)
+            # print(py_trees.display.ascii_tree(ppamissionbt.root))
             # add debug statement
             # py_trees.logging.level = py_trees.logging.Level.DEBUG
-            for i in range(maxtrace):
-                ppataskbt.tick()
-                # print(bboard.trace[-1], ppataskbt.root.status)
+            for i in range(maxtrace*2):
+                ppamissionbt.tick()
+                # print(i, bboard.trace[-1], ppamissionbt.root.status)
                 if (
-                    (ppataskbt.root.status == common.Status.SUCCESS) or
-                        (ppataskbt.root.status == common.Status.FAILURE)):
+                    (ppamissionbt.root.status == common.Status.SUCCESS) or
+                        (ppamissionbt.root.status == common.Status.FAILURE)):
                     break
-            result.append([bboard.trace, ppataskbt.root.status])
-        # print(l, ppataskbt.root.status)
+            result.append([bboard.trace, ppamissionbt.root.status])
         results.append(result)
-        policies.append(policy)
-    # print(len(result), len(results))
-    # print(l, k, [state['state'] for state in bboard.trace])
+        policies.append((policy_cheese, policy_home))
+        # print(sum([s[-1]==common.Status.SUCCESS for s in result])/propsteps)
+
+        # policy = create_policy(policy_cheese)
+        # # print(policy)
+        # action_dict = {
+        #     0: (1, 0),
+        #     1: (0, 1),
+        #     2: (-1, 0),
+        #     3: (0, -1)
+        # }
+        # policy = {state:action_dict[action] for state, action in policy.items()}
+        # env.display_in_grid(policy)
+        # policy = create_policy(policy_home)
+        # policy = {state:action_dict[action] for state, action in policy.items()}
+        # print("\n")
+        # env.display_in_grid(policy)
+       #  print(policy_cheese)
+    # print(l, k, [state['state'] for state in bboard.trace], ppamissionbt.root.status)
+    # print(mission_formula.truth(bboard.trace))
     return results, policies
-
-
-def policy_test_step(pi, mdp, max_trace=29):
-    curr_loc = mdp.curr_loc
-    trace = [curr_loc]
-    idx = 1
-    result = False
-    while True:
-        try:
-            curr_loc, curr_reward, done, _ = mdp.step(pi[curr_loc])
-        except KeyError:
-            result = False
-            break
-        # print(_)
-        trace.append(curr_loc)
-        if done and curr_loc == (3,3):
-            result = True
-            break
-        elif done and curr_loc == (3,2):
-            result = False
-            break
-        else:
-            pass
-        if idx >= max_trace:
-            result = False
-            break
-        idx += 1
-    return result, trace
-
-
-def run_experiment_given_policy(
-        policy, uncertainty, runs=10,
-        maxtrace=30, random=False):
-    env = init_mdp(
-        reward=[-0.04, 2, 2], uncertainty=uncertainty, random=random)
-    # policy = policy_iteration(env)
-    # policy = random_policy()
-    action_dict = {
-        0: (1, 0),
-        1: (0, 1),
-        2: (-1, 0),
-        3: (0, -1)
-    }
-    policy = {state:action_dict[np.argmax(list(actions.values()))] for state,actions in policy.items()}
-    # env.display_in_grid(policy)
-    results = []
-    for l in range(runs):
-        env.restart(random=random)
-        result, trace = policy_test_step(policy, env, max_trace=maxtrace)
-        # print(l, result, trace)
-        results.append([result, trace])
-    return results
 
 
 def experiments_parameters():
@@ -274,23 +290,21 @@ def experiments_parameters():
     uncertainties = [
         (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
         (0.85, 0.075, 0.075), (0.8, 0.1, 0.1),
-        (0.7, 0.15, 0.15), (0.6, 0.2, 0.2),
-        (0.5, 0.25, 0.25), (0.4, 0.3, 0.3),
+        # (0.7, 0.15, 0.15), (0.6, 0.2, 0.2),
+        # (0.5, 0.25, 0.25), (0.4, 0.3, 0.3),
         ]
-    discounts = [
-        0.99, 0.95, 0.9, 0.85, 0.8, 0.7,
-        0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+    discounts = [0.99, 0.9, 0.8, 0.7]
 
     tracelens = [10, 15, 20, 25, 30, 40, 50]
-    propsteps = [10, 15, 20, 25, 30, 40, 50]
+    propsteps = [10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100]
 
     # uncertainties = [(0.95, 0.025, 0.025)]
-    # discounts = [0.9]
-    # rewards = [(-0.04, 2, -2)]
-    # tracelens = [30]
-    # propsteps = [50]
-    random = False
-    runs = 50
+    discounts = [0.9]
+    rewards = [(-0.04, 2, -2)]
+    tracelens = [50]
+    propsteps = [200]
+
+    runs = 2
     results = dict()
     j = 0
     for discount in discounts:
@@ -303,30 +317,32 @@ def experiments_parameters():
                     results[discount][uc][tlen][pstep] = dict()
                     res, policy = run_experiment(
                         rewards[j], uc, runs, maxtrace=tlen,
-                        propsteps=pstep, discount=discount, random=random)
+                        propsteps=pstep, discount=discount)
                     results[discount][uc][tlen][pstep]['result'] = res
                     results[discount][uc][tlen][pstep]['policy'] = policy
+
+            # with open('/tmp/mission_learning_few1.pickle', 'wb') as file:
+            #     pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
+
+            # with open('/tmp/mission_learning_few1.pickle', 'rb') as file:
+            #     data = pickle.load(file)
+            # print('Experiment Done', len(data))
+
         j += 1
-
-    with open('/tmp/learning_30_all.pickle', 'wb') as file:
-        pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
-
-    with open('/tmp/learning_30_all.pickle', 'rb') as file:
-        data = pickle.load(file)
-    print('Experiment Done', len(data))
 
 
 def run_experiment_with_random_loc():
     runs = 50
-    tlen = 35
-    pstep = 80
+    tlen = 50
+    pstep = 200
     discount = 0.9
     rewards = [(-0.04, 2, -2)]
     uncertainties = [(0.95, 0.025, 0.025)]
     res, policy = run_experiment(
         rewards[0], uncertainties[0], runs, maxtrace=tlen,
-        propsteps=pstep, discount=discount,random=False)
+        propsteps=pstep, discount=discount, random=False)
 
+    # print(res)
     results = {}
     uncertainties = [
         (0.95, 0.025, 0.025), (0.9, 0.05, 0.05),
@@ -335,23 +351,24 @@ def run_experiment_with_random_loc():
     for j in range(len(res)):
         for u in uncertainties:
             results[u] = results.get(u, [])
+            # print(res[j][-1][1])
             if res[j][-1][1] == common.Status.SUCCESS:
                 results[u].append(
                     run_experiment_given_policy(
-                        policy[j], u, runs=50, maxtrace=29, random=True))
+                        policy[j], u, runs=50, maxtrace=50, random=True))
 
-    with open('/tmp/resilence_test_randomstart.pickle', 'wb') as file:
+    with open('/tmp/mission_test_randomstart.pickle', 'wb') as file:
         pickle.dump(results, file, protocol=pickle.HIGHEST_PROTOCOL)
 
-    with open('/tmp/resilence_test_randomstart.pickle', 'rb') as file:
+    with open('/tmp/mission_test_randomstart.pickle', 'rb') as file:
         data = pickle.load(file)
 
     print('Experiment Done', len(data))
 
 
 def main():
-    experiments_parameters()
-    # run_experiment_with_random_loc()
+    # experiments_parameters()
+    run_experiment_with_random_loc()
 
 
 if __name__ =='__main__':
