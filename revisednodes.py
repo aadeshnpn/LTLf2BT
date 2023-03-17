@@ -67,7 +67,7 @@ class PropConditionNodeEnv(Behaviour):
                 return_value = common.Status.SUCCESS
             else:
                 return_value = common.Status.FAILURE
-        except IndexError:
+        except KeyError:
             return_value = common.Status.FAILURE
 
         return return_value
@@ -374,11 +374,11 @@ def parse_ltlf(formula, mappings, task_max=4):
 def create_PPATask_GBT(
         precond, postcond, taskcnstr, gblcnstr, action_node):
     seletector_ppatask = Selector('lambda_ppatask', memory=False)
-    post_blk = Parallel('sigma_postblk')
-    pre_blk = Parallel('sigma_preblk')
-    task_seq = Parallel('sigma_task')
-    until_seq = Parallel('sigma_until')
-    action_seq = Parallel('sigma_action')
+    post_blk = Sequence('sigma_postblk')
+    pre_blk = Sequence('sigma_preblk')
+    task_seq = Sequence('sigma_task', memory=False)
+    until_seq = Sequence('sigma_until', memory=False)
+    action_seq = Sequence('sigma_action')
     precond_node = PropConditionNodeEnv(precond, action_node.env)
     precond_decorator = Finally(precond_node, name='F')
     postcond_node = PropConditionNodeEnv(postcond, action_node.env)
@@ -398,7 +398,7 @@ def create_PPATask_GBT(
 class Env:
     def __init__(
         self, proposition_symbols=[
-            'a', 'b', 'c', 'd', 'u', 'v', 'x', 'y']):
+            'a', 'b', 'c', 'd', 'w', 'v', 'x', 'y']):
         self.proposition_symbols = proposition_symbols
         self.states = {
             p: np.random.choice(
@@ -446,8 +446,72 @@ def test_PPATASK():
     print(t)
 
 
+def test_mission_until():
+    formula_one = '(G (d) & b) | ((G(d) & a) & (c U (b & G(d))))'
+    formula_two = '(G (y) & v) | ((G(y) & w) & (x U (v & G(y))))'
+    # mission = '(F (b)) U (F (v))'
+    mission = 'b U v'
+    parser = LTLfParser()
+    mission_formula = parser(mission)
+    mission_ppa = '(' + formula_one + ') U (' + formula_two + ')'
+    mparser = LTLfParser()
+    mission_ppa_formual = mparser(mission_ppa)
+    # print(mission_ppa_formual)
+    parser_task_one = LTLfParser()
+    parser_task_two = LTLfParser()
+    task_one_forumal = parser_task_one(formula_one)
+    task_two_forumal = parser_task_two(formula_two)
+
+    for t in range(10):
+        # env_one = Env(['a', 'b', 'c', 'd'])
+        env = Env()
+        action_node_one = ActionNode('b', env, task_max=3)
+        action_node_two = ActionNode('v', env, task_max=3)
+        ppatask_one = create_PPATask_GBT('a', 'b', 'c', 'd', action_node_one)
+        ppatask_two = create_PPATask_GBT('w', 'v', 'x', 'y', action_node_two)
+        mappings = {'b': ppatask_one, 'v': ppatask_two}
+        gbt = parse_ltlf(mission_formula, mappings)
+        gbt = BehaviourTree(gbt)
+        bboard = blackboard.Client(name='gbt' + str(t))
+        bboard.register_key(key='trace', access=common.Access.WRITE)
+        try:
+            print('try', bboard.get('trace'))
+        except KeyError:
+            # print('Need to hit this twice')
+            bboard.trace = []
+        bboard.trace.append(env.states)
+        # print(py_trees.display.ascii_tree(gbt.root))
+        for i in range(3):
+            gbt.tick()
+            if gbt.root.status in [
+                    common.Status.SUCCESS, common.Status.FAILURE]:
+                break
+        print(t, bboard.trace)
+        bt_status = True if gbt.root.status == common.Status.SUCCESS else False
+        ltlf_parse_status = mission_ppa_formual.truth(bboard.trace, 0)
+        print(t, ltlf_parse_status, gbt.root.status, bt_status)
+        # print("\n")
+        print(
+            t, task_one_forumal.truth(bboard.trace, 0),
+            task_two_forumal.truth(bboard.trace, 0))
+        if len(bboard.trace) > 1:
+            assert ltlf_parse_status == bt_status
+        bboard.unset('trace')
+    print(t)
+
+
+def random_test():
+    mission = 'b U v'
+    parser = LTLfParser()
+    mission_formula = parser(mission)
+    trace = [{'b': False}]
+    print(mission_formula.truth(trace, 0))
+
+
 def main():
-    test_PPATASK()
+    # test_PPATASK()
+    test_mission_until()
+    # random_test()
 
 
 if __name__ == '__main__':
