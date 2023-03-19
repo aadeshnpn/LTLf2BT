@@ -179,6 +179,67 @@ class ActionNode(Behaviour):
         """Init method for the action node."""
         super(ActionNode, self).__init__('Action'+name)
         self.action_symbol = name
+        self.env = env
+        self.planner = planner
+        self.index = 0
+        self.task_max = task_max
+
+    def setup(self, timeout, trace=None, i=0):
+        """Have defined the setup method.
+
+        This method defines the other objects required for the
+        condition node.
+        Args:
+        timeout: property from Behavior super class. Not required
+        symbol: Name of the proposition symbol
+        value: A dict object with key as the proposition symbol and
+               boolean value as values. Supplied by trace.
+        """
+        self.index = i
+
+    def initialise(self):
+        """Everytime initialization. Not required for now."""
+        pass
+
+    def reset(self, i=0):
+        self.index = i
+
+    def increment(self):
+        self.index += 1
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        """
+        # Plan action and take that action in the environment.
+        # print('action node',self.index, self.blackboard.trace[-1])
+        self.env.step()
+        self.index += 1
+        # self.blackboard.trace.append(self.env.states)
+        # curr_symbol_truth_value = self.blackboard.trace[-1][self.action_symbol]
+        curr_symbol_truth_value = self.env.states[self.action_symbol]
+        # print('action node',self.name, self.index, self.task_max, self.blackboard.trace[-1])
+        if curr_symbol_truth_value and self.index <= self.task_max:
+            return common.Status.SUCCESS
+        elif (
+                (curr_symbol_truth_value is False) and (
+                    self.index < self.task_max)):
+            return common.Status.RUNNING
+        else:
+            return common.Status.FAILURE
+
+
+class ActionNodeBoard(Behaviour):
+    """Action node for the planning atomic propositions.
+
+    Inherits the Behaviors class from py_trees. This
+    behavior implements the action node for the planning LTLf propositions.
+    """
+
+    def __init__(self, name, env, planner=None, task_max=3):
+        """Init method for the action node."""
+        super(ActionNodeBoard, self).__init__('Action'+name)
+        self.action_symbol = name
         self.blackboard = blackboard.Client(name='gbt')
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
         self.env = env
@@ -217,8 +278,9 @@ class ActionNode(Behaviour):
         # print('action node',self.index, self.blackboard.trace[-1])
         self.env.step()
         self.index += 1
-        self.blackboard.trace.append(self.env.states)
-        curr_symbol_truth_value = self.blackboard.trace[-1][self.action_symbol]
+        # self.blackboard.trace.append(self.env.states)
+        # curr_symbol_truth_value = self.blackboard.trace[-1][self.action_symbol]
+        curr_symbol_truth_value = self.env.states[self.action_symbol]
         # print('action node',self.name, self.index, self.task_max, self.blackboard.trace[-1])
         if curr_symbol_truth_value and self.index <= self.task_max:
             return common.Status.SUCCESS
@@ -415,7 +477,7 @@ def test_PPATASK():
     parser = LTLfParser()
     task_formula = parser(formula)
 
-    for t in range(1000):
+    for t in range(10000):
         env = Env(['a', 'b', 'c', 'd'])
         action_node = ActionNode('b', env, task_max=3)
         bboard = blackboard.Client(name='gbt' + str(t))
@@ -433,6 +495,7 @@ def test_PPATASK():
         # py_trees.logging.level = py_trees.logging.Level.DEBUG
         for i in range(3):
             ppataskbt.tick()
+            bboard.trace.append(env.states)
             if ppataskbt.root.status in [
                     common.Status.SUCCESS, common.Status.FAILURE]:
                 break
@@ -462,7 +525,7 @@ def test_mission_until():
     task_one_forumal = parser_task_one(formula_one)
     task_two_forumal = parser_task_two(formula_two)
 
-    for t in range(10):
+    for t in range(500):
         # env_one = Env(['a', 'b', 'c', 'd'])
         env = Env()
         action_node_one = ActionNode('b', env, task_max=3)
@@ -474,15 +537,40 @@ def test_mission_until():
         gbt = BehaviourTree(gbt)
         bboard = blackboard.Client(name='gbt' + str(t))
         bboard.register_key(key='trace', access=common.Access.WRITE)
-        try:
-            print('try', bboard.get('trace'))
-        except KeyError:
-            # print('Need to hit this twice')
-            bboard.trace = []
-        bboard.trace.append(env.states)
+        bboard.trace = env.states
+        # try:
+        #     print('try', bboard.get('trace'))
+        # except KeyError:
+        #     # print('Need to hit this twice')
+        #     bboard.trace = [{p: env.states[p] for p in ['a', 'b', 'c', 'd']}]
         # print(py_trees.display.ascii_tree(gbt.root))
+        # one_idx = 1
+        # two_idx = 0
         for i in range(3):
             gbt.tick()
+        #     # Trace Stack logic
+        #     if (
+        #         (action_node_one.status != common.Status.INVALID) and (
+        #             one_idx == action_node_one.index)):
+        #         try:
+        #             bboard.trace[one_idx].update(
+        #                 {p: env.states[p] for p in ['a', 'b', 'c', 'd']})
+        #         except IndexError:
+        #             bboard.trace.append(dict())
+        #             bboard.trace[one_idx] = {
+        #                 p: env.states[p] for p in ['a', 'b', 'c', 'd']}
+        #         one_idx += 1
+        #     if (
+        #         (action_node_two.status != common.Status.INVALID) and (
+        #             two_idx == action_node_two.index-1)):
+        #         try:
+        #             bboard.trace.append(dict())
+        #             bboard.trace[two_idx].update(
+        #                 {p: env.states[p] for p in ['w', 'v', 'x', 'y']})
+        #         except IndexError:
+        #             bboard.trace[two_idx] = {
+        #                 p: env.states[p] for p in ['w', 'v', 'x', 'y']}
+        #         two_idx += 1
             if gbt.root.status in [
                     common.Status.SUCCESS, common.Status.FAILURE]:
                 break
@@ -509,8 +597,8 @@ def random_test():
 
 
 def main():
-    # test_PPATASK()
-    test_mission_until()
+    test_PPATASK()
+    # test_mission_until()
     # random_test()
 
 
