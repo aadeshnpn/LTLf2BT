@@ -645,6 +645,86 @@ def test_mission_until():
     print(t)
 
 
+def test_mission_finally_until():
+    formula_one = '(G (d) & b) | ((G(d) & a) & (c U (b & G(d))))'
+    formula_two = '(G (y) & v) | ((G(y) & w) & (x U (v & G(y))))'
+    # mission = '(F (b)) U (F (v))'
+    mission = 'b U (F(v))'
+    parser = LTLfParser()
+    mission_formula = parser(mission)
+    mission_ppa = '(' + formula_one + ') U (F(' + formula_two + '))'
+    mparser = LTLfParser()
+    mission_ppa_formual = mparser(mission_ppa)
+    # print(mission_ppa_formual)
+    parser_task_one = LTLfParser()
+    parser_task_two = LTLfParser()
+    task_one_forumal = parser_task_one(formula_one)
+    task_two_forumal = parser_task_two(formula_two)
+    for t in range(10000):
+        # env_one = Env(['a', 'b', 'c', 'd'])
+        env = Env()
+        trace = [env.states]
+        action_node_one = ActionNodeBoard(
+            'b', env, task_max=5, props=['a', 'b', 'c', 'd'])
+        action_node_two = ActionNodeBoard(
+            'v', env, task_max=5, props=['w', 'v', 'x', 'y'])
+        ppatask_one = create_PPATask_GBT('a', 'b', 'c', 'd', action_node_one)
+        ppatask_two = create_PPATask_GBT('w', 'v', 'x', 'y', action_node_two)
+        mappings = {'b': ppatask_one, 'v': ppatask_two}
+        gbt = parse_ltlf(mission_formula, mappings)
+        gbt = BehaviourTree(gbt)
+        blackboard_one = blackboard.Client(name='b')
+        blackboard_one.register_key(
+            key='trace'+'b', access=common.Access.WRITE)
+        blackboard_two = blackboard.Client(name='v')
+        blackboard_two.register_key(
+            key='trace'+'v', access=common.Access.WRITE)
+        # bboard = blackboard.Client(name='gbt' + str(t))
+        # bboard.register_key(key='trace', access=common.Access.WRITE)
+        # print(blackboard_one, blackboard_two)
+        blackboard_one.set('traceb', [
+            {p: env.states[p] for p in ['a', 'b', 'c', 'd']}])
+
+        for i in range(10):
+            gbt.tick()
+            trace.append(env.states)
+            if gbt.root.status in [
+                    common.Status.SUCCESS, common.Status.FAILURE]:
+                break
+        # print(t, bboard.trace)
+        if (ppatask_two.status is not common.Status.INVALID):
+            try:
+                blackboard_two.get('tracev')
+            except KeyError:
+                blackboard_two.set('tracev', [
+                    {p: env.states[p] for p in ['w', 'v', 'x', 'y']}])
+        try:
+            main_trace = stack_trace(
+                blackboard_one.get('traceb'), blackboard_two.get('tracev'))
+        except KeyError:
+            main_trace = blackboard_one.get('traceb')
+        # print(t, main_trace)
+        # print(t, trace)
+        # print(t, 'one', blackboard_one.get('traceb'))
+        try:
+            # print(t, 'two', blackboard_two.get('tracev'))
+            blackboard_two.get('tracev')
+        except KeyError:
+            pass
+        bt_status = True if gbt.root.status == common.Status.SUCCESS else False
+        ltlf_parse_status = mission_ppa_formual.truth(main_trace, 0)
+        # print(t, ltlf_parse_status, gbt.root.status, bt_status)
+        # print("\n")
+        # print(
+        #     t, task_one_forumal.truth(main_trace, 0),
+        #     task_two_forumal.truth(main_trace, 0))
+        if len(main_trace) > 1:
+            assert ltlf_parse_status == bt_status
+        blackboard_one.unset('traceb')
+        blackboard_two.unset('tracev')
+    print(t)
+
+
 def random_test():
     mission = 'b U v'
     parser = LTLfParser()
@@ -655,8 +735,9 @@ def random_test():
 
 def main():
     # test_PPATASK()
-    test_mission_until()
+    # test_mission_until()
     # random_test()
+    test_mission_finally_until()
 
 
 if __name__ == '__main__':
