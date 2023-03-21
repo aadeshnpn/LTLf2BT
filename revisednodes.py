@@ -236,16 +236,21 @@ class ActionNodeBoard(Behaviour):
     behavior implements the action node for the planning LTLf propositions.
     """
 
-    def __init__(self, name, env, planner=None, task_max=3):
+    def __init__(
+            self, name, env, planner=None, task_max=3,
+            props=['a', 'b', 'c', 'd']):
         """Init method for the action node."""
         super(ActionNodeBoard, self).__init__('Action'+name)
         self.action_symbol = name
-        self.blackboard = blackboard.Client(name='gbt')
-        self.blackboard.register_key(key='trace', access=common.Access.WRITE)
+        self.blackboard = blackboard.Client(name=name)
+        self.blackboard.register_key(
+            key='trace'+name, access=common.Access.WRITE)
         self.env = env
         self.planner = planner
         self.index = 0
         self.task_max = task_max
+        self.props = props
+        self.trace_name = 'trace'+name
 
     def setup(self, timeout, trace=None, i=0):
         """Have defined the setup method.
@@ -275,10 +280,22 @@ class ActionNodeBoard(Behaviour):
         Main function that is called when BT ticks.
         """
         # Plan action and take that action in the environment.
-        # print('action node',self.index, self.blackboard.trace[-1])
+
+        try:
+            self.blackboard.get(self.trace_name)
+        except KeyError:
+            self.blackboard.set(
+                self.trace_name, [{p: self.env.states[p] for p in self.props}])
         self.env.step()
         self.index += 1
-        # self.blackboard.trace.append(self.env.states)
+        temp_trace = self.blackboard.get(
+                self.trace_name)+[{p: self.env.states[p] for p in self.props}]
+        # print('action node',self.blackboard.get(self.trace_name), [{p: self.env.states[p] for p in self.props}])
+        self.blackboard.set(
+            self.trace_name,
+            temp_trace
+            )
+        # print('action node', self.name, 'trace appended', temp_trace)
         # curr_symbol_truth_value = self.blackboard.trace[-1][self.action_symbol]
         curr_symbol_truth_value = self.env.states[self.action_symbol]
         # print('action node',self.name, self.index, self.task_max, self.blackboard.trace[-1])
@@ -493,7 +510,7 @@ def test_PPATASK():
         # print(py_trees.display.ascii_tree(ppataskbt.root))
         # add debug statement
         # py_trees.logging.level = py_trees.logging.Level.DEBUG
-        for i in range(3):
+        for i in range(5):
             ppataskbt.tick()
             bboard.trace.append(env.states)
             if ppataskbt.root.status in [
@@ -507,6 +524,22 @@ def test_PPATASK():
         assert ltlf_parse_status == bt_status
         bboard.unset('trace')
     print(t)
+
+
+def stack_trace(trace_one, trace_two):
+    trace = []
+    if len(trace_one) >= len(trace_two):
+        for k in range(len(trace_two)):
+            trace.append(
+                {**trace_one[k], **trace_two[k]})
+        # trace += trace_one[len(trace_two):]
+    else:
+        for k in range(len(trace_one)):
+            trace.append(
+                {**trace_one[k], **trace_two[k]})
+        # trace += trace_one[len(trace_one):]
+
+    return trace
 
 
 def test_mission_until():
@@ -524,30 +557,34 @@ def test_mission_until():
     parser_task_two = LTLfParser()
     task_one_forumal = parser_task_one(formula_one)
     task_two_forumal = parser_task_two(formula_two)
-
-    for t in range(500):
+    for t in range(10000):
         # env_one = Env(['a', 'b', 'c', 'd'])
         env = Env()
-        action_node_one = ActionNode('b', env, task_max=3)
-        action_node_two = ActionNode('v', env, task_max=3)
+        trace = [env.states]
+        action_node_one = ActionNodeBoard(
+            'b', env, task_max=3, props=['a', 'b', 'c', 'd'])
+        action_node_two = ActionNodeBoard(
+            'v', env, task_max=3, props=['w', 'v', 'x', 'y'])
         ppatask_one = create_PPATask_GBT('a', 'b', 'c', 'd', action_node_one)
         ppatask_two = create_PPATask_GBT('w', 'v', 'x', 'y', action_node_two)
         mappings = {'b': ppatask_one, 'v': ppatask_two}
         gbt = parse_ltlf(mission_formula, mappings)
         gbt = BehaviourTree(gbt)
-        bboard = blackboard.Client(name='gbt' + str(t))
-        bboard.register_key(key='trace', access=common.Access.WRITE)
-        bboard.trace = env.states
-        # try:
-        #     print('try', bboard.get('trace'))
-        # except KeyError:
-        #     # print('Need to hit this twice')
-        #     bboard.trace = [{p: env.states[p] for p in ['a', 'b', 'c', 'd']}]
-        # print(py_trees.display.ascii_tree(gbt.root))
-        # one_idx = 1
-        # two_idx = 0
+        blackboard_one = blackboard.Client(name='b')
+        blackboard_one.register_key(
+            key='trace'+'b', access=common.Access.WRITE)
+        blackboard_two = blackboard.Client(name='v')
+        blackboard_two.register_key(
+            key='trace'+'v', access=common.Access.WRITE)
+        # bboard = blackboard.Client(name='gbt' + str(t))
+        # bboard.register_key(key='trace', access=common.Access.WRITE)
+        # print(blackboard_one, blackboard_two)
+        blackboard_one.set('traceb', [
+            {p: env.states[p] for p in ['a', 'b', 'c', 'd']}])
+
         for i in range(3):
             gbt.tick()
+            trace.append(env.states)
         #     # Trace Stack logic
         #     if (
         #         (action_node_one.status != common.Status.INVALID) and (
@@ -574,17 +611,37 @@ def test_mission_until():
             if gbt.root.status in [
                     common.Status.SUCCESS, common.Status.FAILURE]:
                 break
-        print(t, bboard.trace)
+        # print(t, bboard.trace)
+        if (ppatask_two.status is not common.Status.INVALID):
+            try:
+                blackboard_two.get('tracev')
+            except KeyError:
+                blackboard_two.set('tracev', [
+                    {p: env.states[p] for p in ['w', 'v', 'x', 'y']}])
+        try:
+            main_trace = stack_trace(
+                blackboard_one.get('traceb'), blackboard_two.get('tracev'))
+        except KeyError:
+            main_trace = blackboard_one.get('traceb')
+        # print(t, main_trace)
+        # print(t, trace)
+        # print(t, 'one', blackboard_one.get('traceb'))
+        try:
+            # print(t, 'two', blackboard_two.get('tracev'))
+            blackboard_two.get('tracev')
+        except KeyError:
+            pass
         bt_status = True if gbt.root.status == common.Status.SUCCESS else False
-        ltlf_parse_status = mission_ppa_formual.truth(bboard.trace, 0)
-        print(t, ltlf_parse_status, gbt.root.status, bt_status)
+        ltlf_parse_status = mission_ppa_formual.truth(main_trace, 0)
+        # print(t, ltlf_parse_status, gbt.root.status, bt_status)
         # print("\n")
-        print(
-            t, task_one_forumal.truth(bboard.trace, 0),
-            task_two_forumal.truth(bboard.trace, 0))
-        if len(bboard.trace) > 1:
+        # print(
+        #     t, task_one_forumal.truth(main_trace, 0),
+        #     task_two_forumal.truth(main_trace, 0))
+        if len(main_trace) > 1:
             assert ltlf_parse_status == bt_status
-        bboard.unset('trace')
+        blackboard_one.unset('traceb')
+        blackboard_two.unset('tracev')
     print(t)
 
 
@@ -597,8 +654,8 @@ def random_test():
 
 
 def main():
-    test_PPATASK()
-    # test_mission_until()
+    # test_PPATASK()
+    test_mission_until()
     # random_test()
 
 
