@@ -152,19 +152,21 @@ def create_action_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
     # By default parallel policy will not tick previous child that
     # was successful last time
     # So modify the synchronise flag
-    ppatask = Parallel(
+    ppatask = Sequence(
         'pi_ppatask',
-        policy=py_trees.common.ParallelPolicy.SuccessOnAll(
-            synchronise=False))
+        # policy=py_trees.common.ParallelPolicy.SuccessOnAll(
+        #    synchronise=False)
+        memory=False)
     post_blk = Selector('lambda_postblk', memory=False)
     task_seq = Parallel(
         'pi_task',
         policy=py_trees.common.ParallelPolicy.SuccessOnAll(
-            synchronise=False))
-    until_seq = Parallel(
+        synchronise=True))
+    until_seq = Sequence(
         'sigma_until',
-        policy=py_trees.common.ParallelPolicy.SuccessOnAll(
-            synchronise=False))
+        # policy=py_trees.common.ParallelPolicy.SuccessOnAll(
+        # synchronise=True)
+        memory=False)
     action_seq = Parallel(
         'sigma_action',
         # memory=False,
@@ -253,6 +255,33 @@ class SuccessEnvironment3:
         self.curr_state = self.trace[self.index]
         self.index += 1
 
+class SuccessEnvironment4:
+    def __init__(self) -> None:
+        self.trace = [
+            {'a': False, 'b': True, 'c': True, 'd': True},
+            {'a': False, 'b': False, 'c': True, 'd': True},
+            {'a': True, 'b': True, 'c': True, 'd': False}
+            ]
+        self.curr_state = self.trace[0]
+        self.index = 1
+
+    def step(self):
+        self.curr_state = self.trace[self.index]
+        self.index += 1
+
+
+class SuccessEnvironment5:
+    def __init__(self) -> None:
+        self.trace = [
+            {'a': True, 'b': False, 'c': True, 'd': False},
+            ]
+        self.curr_state = self.trace[0]
+        self.index = 1
+
+    def step(self):
+        self.curr_state = self.trace[self.index]
+        self.index += 1
+
 
 class FailureEnvironment1:
     def __init__(self) -> None:
@@ -315,13 +344,16 @@ class bcolors:
 
 def main():
     ## a,b,c,d -> PoC, PrC, GC, TC
-    for i in range(100):
+    for i in range(50000):
         ppatask_formula = "G(c) & (a | (b & (d U ((a) & G(c)))))"
         # ppatask_formula = "(a) & G(c)"
         parser = LTLfParser()
         formula = parser(ppatask_formula)
         env = Environment()
-        # env = FailureEnvironment2()
+        # for env in [
+        #     SuccessEnvironment1(), SuccessEnvironment2(), SuccessEnvironment3(), SuccessEnvironment4(),
+        #     FailureEnvironment1(), FailureEnvironment2(), FailureEnvironment3(), SuccessEnvironment5()]:
+            # env = SuccessEnvironment5()
         bboard = blackboard.Client(name='gbt')
         bboard.register_key(key='trace', access=common.Access.WRITE)
         bboard.trace = [env.curr_state]
