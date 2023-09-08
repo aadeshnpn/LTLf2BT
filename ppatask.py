@@ -12,6 +12,9 @@ import copy
 import argparse
 import numpy as np
 from flloat.parser.ltlf import LTLfParser
+from mpire import WorkerPool
+import time
+import pandas as pd
 
 
 class ConditionNode(Behaviour):
@@ -153,9 +156,7 @@ def create_action_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
     # was successful last time
     # So modify the synchronise flag
     ppatask = Sequence(
-        'pi_ppatask',
-        # policy=py_trees.common.ParallelPolicy.SuccessOnAll(
-        #    synchronise=False)
+        'sigma_ppatask',
         memory=False)
     post_blk = Selector('lambda_postblk', memory=False)
     task_seq = Parallel(
@@ -164,12 +165,9 @@ def create_action_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
         synchronise=True))
     until_seq = Sequence(
         'sigma_until',
-        # policy=py_trees.common.ParallelPolicy.SuccessOnAll(
-        # synchronise=True)
         memory=False)
     action_seq = Parallel(
-        'sigma_action',
-        # memory=False,
+        'pi_action',
         policy=py_trees.common.ParallelPolicy.SuccessOnAll(
             synchronise=False))
     precond_node = ConditionNode(precond,  env=action_node.env)
@@ -186,7 +184,7 @@ def create_action_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
 
 
 class Environment:
-    def __init__(self) -> None:
+    def __init__(self, seed=None) -> None:
         self.trace = [
             {'a': False, 'b': False, 'c': False, 'd': False},
             {'a': False, 'b': False, 'c': True, 'd': False},
@@ -205,10 +203,15 @@ class Environment:
             {'a': True, 'b': True, 'c': False, 'd': True},
             {'a': True, 'b': True, 'c': True, 'd': True},
         ]
-        self.curr_state = np.random.choice(self.trace)
+        if seed is not None:
+            seed = time.time_ns() % 39916801
+            self.random = np.random.RandomState(seed)
+        else:
+            self.random = np.random.RandomState()
+        self.curr_state = self.random.choice(self.trace)
 
     def step(self):
-        self.curr_state = np.random.choice(self.trace)
+        self.curr_state = self.random.choice(self.trace)
 
 
 class SuccessEnvironment1:
@@ -342,49 +345,73 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
+def verify_trace(x):
+    ppatask_formula = "G(c) & (a | (b & (d U ((a) & G(c)))))"
+    # ppatask_formula = "(a) & G(c)"
+    parser = LTLfParser()
+    formula = parser(ppatask_formula)
+    env = Environment(seed=x)
+    # for env in [
+    #     SuccessEnvironment1(), SuccessEnvironment2(), SuccessEnvironment3(), SuccessEnvironment4(),
+    #     FailureEnvironment1(), FailureEnvironment2(), FailureEnvironment3(), SuccessEnvironment5()]:
+    # env = SuccessEnvironment5()
+    bboard = blackboard.Client(name='gbt')
+    bboard.register_key(key='trace', access=common.Access.WRITE)
+    bboard.trace = [env.curr_state]
+    action_node = ActionNode('a', env=env, task_max=5)
+    # ppatask_bt = create_PPATask_GBT('b', 'a', 'd', 'c', action_node)
+    ppatask_bt = create_action_GBT('b', 'a', 'd', 'c', action_node)
+    bt = BehaviourTree(ppatask_bt)
+    # print(py_trees.display.ascii_tree(bt.root))
+    # py_trees.logging.level = py_trees.logging.Level.DEBUG
+    # print(bt.root.status)
+    while True:
+        bt.tick()
+        # print(env.curr_state)
+        if (bt.root.status == common.Status.SUCCESS or bt.root.status == common.Status.FAILURE):
+            break
+    ltlf_status = formula.truth(bboard.trace, 0)
+    bt_status = bt.root.status
+    trace = bboard.trace
+    if ltlf_status is True and bt_status == common.Status.SUCCESS:
+        # print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(
+        #     trace, bt_status, ltlf_status))
+        pass
+    elif ltlf_status is False and bt_status == common.Status.FAILURE:
+        # print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(
+        #     trace, bt_status, ltlf_status))
+        pass
+    else:
+        print("{} trace: {}, BT status: {}, LTLf status: {} {}".format(
+            bcolors.WARNING, trace, bt_status, ltlf_status, bcolors.ENDC))
+        print(bt.root.status, ltlf_status)
+
+    return (len(trace), ltlf_status, bt_status==common.Status.SUCCESS)
+
 def main():
     ## a,b,c,d -> PoC, PrC, GC, TC
-    for i in range(50000):
-        ppatask_formula = "G(c) & (a | (b & (d U ((a) & G(c)))))"
-        # ppatask_formula = "(a) & G(c)"
-        parser = LTLfParser()
-        formula = parser(ppatask_formula)
-        env = Environment()
-        # for env in [
-        #     SuccessEnvironment1(), SuccessEnvironment2(), SuccessEnvironment3(), SuccessEnvironment4(),
-        #     FailureEnvironment1(), FailureEnvironment2(), FailureEnvironment3(), SuccessEnvironment5()]:
-            # env = SuccessEnvironment5()
-        bboard = blackboard.Client(name='gbt')
-        bboard.register_key(key='trace', access=common.Access.WRITE)
-        bboard.trace = [env.curr_state]
-        action_node = ActionNode('a', env=env, task_max=5)
-        # ppatask_bt = create_PPATask_GBT('b', 'a', 'd', 'c', action_node)
-        ppatask_bt = create_action_GBT('b', 'a', 'd', 'c', action_node)
-        bt = BehaviourTree(ppatask_bt)
-        # print(py_trees.display.ascii_tree(bt.root))
-        # py_trees.logging.level = py_trees.logging.Level.DEBUG
-        # print(bt.root.status)
-        while True:
-            bt.tick()
-            # print(env.curr_state)
-            if (bt.root.status == common.Status.SUCCESS or bt.root.status == common.Status.FAILURE):
-                break
-        ltlf_status = formula.truth(bboard.trace, 0)
-        bt_status = bt.root.status
-        trace = bboard.trace
-        if ltlf_status is True and bt_status == common.Status.SUCCESS:
-            # print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(
-            #     trace, bt_status, ltlf_status))
-            pass
-        elif ltlf_status is False and bt_status == common.Status.FAILURE:
-            # print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(
-            #     trace, bt_status, ltlf_status))
-            pass
-        else:
-            print("{} trace: {}, BT status: {}, LTLf status: {} {}".format(
-                bcolors.WARNING, trace, bt_status, ltlf_status, bcolors.ENDC))
-            print(bt.root.status, ltlf_status)
+    with WorkerPool(n_jobs=8) as pool:
+        results = pool.map(verify_trace, range(1024*256), progress_bar=True)
+    pd_data = pd.DataFrame(data=np.array(results))
+    # Where BT and LTf return success
+    data_subset = pd_data.loc[(pd_data[1]==1) & (pd_data[1]==1)][0].to_numpy()
+    print( 'Successful Traces',
+        'Mean, Media, Q1, Q3',
+        np.mean(data_subset),
+        np.quantile(data_subset, q=0.5),
+        np.quantile(data_subset, q=0.25),
+        np.quantile(data_subset, q=0.75),
+        )
 
+    # Where BT and LTf disagree
+    data_subset = pd_data.loc[(pd_data[1]==0) & (pd_data[1]==0)][0].to_numpy()
+    print( 'Fail Traces',
+        'Mean, Media, Q1, Q3',
+        np.mean(data_subset),
+        np.quantile(data_subset, q=0.5),
+        np.quantile(data_subset, q=0.25),
+        np.quantile(data_subset, q=0.75),
+        )
 
 if __name__ == "__main__":
     main()
