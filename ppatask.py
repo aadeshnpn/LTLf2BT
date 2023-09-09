@@ -390,28 +390,36 @@ def verify_trace(x):
 
 def main():
     ## a,b,c,d -> PoC, PrC, GC, TC
-    with WorkerPool(n_jobs=8) as pool:
-        results = pool.map(verify_trace, range(1024*256), progress_bar=True)
+    with WorkerPool(n_jobs=16) as pool:
+        results = pool.map(verify_trace, range(1024*1024), progress_bar=True)
     pd_data = pd.DataFrame(data=np.array(results))
     # Where BT and LTf return success
     data_subset = pd_data.loc[(pd_data[1]==1) & (pd_data[1]==1)][0].to_numpy()
+    np.save('/home/aadeshnpn/Desktop/trace_data.npy', pd_data.to_numpy())
     print( 'Successful Traces',
-        'Mean, Media, Q1, Q3',
+        'Mean, Media, Q1, Q3, Max',
         np.mean(data_subset),
         np.quantile(data_subset, q=0.5),
         np.quantile(data_subset, q=0.25),
         np.quantile(data_subset, q=0.75),
+        np.max(data_subset)
         )
+    percent = ((len(data_subset)*1.0)/ ( len(results) * 1.0)) * 100
+    print('Successful Traces %', percent)
 
     # Where BT and LTf disagree
     data_subset = pd_data.loc[(pd_data[1]==0) & (pd_data[1]==0)][0].to_numpy()
     print( 'Fail Traces',
-        'Mean, Media, Q1, Q3',
+        'Mean, Media, Q1, Q3, Max',
         np.mean(data_subset),
         np.quantile(data_subset, q=0.5),
         np.quantile(data_subset, q=0.25),
         np.quantile(data_subset, q=0.75),
+        np.max(data_subset)
         )
+    percent = ((len(data_subset)*1.0)/ ( len(results) * 1.0)) * 100
+    print('Failed Traces %', percent)
+
 
 if __name__ == "__main__":
     main()
