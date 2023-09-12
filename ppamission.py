@@ -133,7 +133,7 @@ class Environment():
         self.curr_state = self.random.choice(self.trace)
 
 
-class SuccessEnvironment1:
+class FinallySuccessEnvironment1:
     def __init__(self) -> None:
         self.trace = [
             {'poc': False, 'prc': True,   'gc': True,  'tc': True},
@@ -148,7 +148,7 @@ class SuccessEnvironment1:
         self.index += 1
 
 
-class SuccessEnvironment2:
+class FinallySuccessEnvironment2:
     def __init__(self) -> None:
         self.trace = [
             {'poc': False, 'prc': True,   'gc': True,  'tc': True},
@@ -165,6 +165,61 @@ class SuccessEnvironment2:
         self.curr_state = self.trace[self.index]
         self.index += 1
 
+
+class FinallyFailureEnvironment2:
+    def __init__(self) -> None:
+        self.trace = [
+            {'poc': False, 'prc': True,   'gc': True,  'tc': True},
+            {'poc': False, 'prc': False,  'gc': True,  'tc': True},
+            {'poc': False, 'prc': False,  'gc': True,  'tc': True},
+            {'poc': False, 'prc': True,   'gc': True,  'tc': True},
+            {'poc': False, 'prc': False,  'gc': True,  'tc': True},
+            {'poc': False, 'prc': False,  'gc': True,  'tc': True},
+            {'poc': False, 'prc': False,  'gc': True,  'tc': False},
+            {'poc': True,  'prc': False,  'gc': True,  'tc': False}
+            ]
+        self.curr_state = self.trace[0]
+        self.index = 1
+
+    def step(self):
+        self.curr_state = self.trace[self.index]
+        self.index += 1
+
+
+class UntilSuccessEnvironment1:
+    def __init__(self) -> None:
+        self.trace = [
+            {
+                'poc1': False, 'prc1': True,   'gc1': True,  'tc1': True,
+                'poc2': False, 'prc2': True,   'gc2': True,  'tc2': True
+            },
+            {
+                'poc1': False, 'prc1': False,  'gc1': True,  'tc1': True,
+                'poc2': False, 'prc2': False,  'gc2': True,  'tc2': True
+                },
+            {
+                'poc1': True,  'prc1': False,  'gc1': True,  'tc1': False,
+                'poc2': False,  'prc2': True,  'gc2': True,  'tc2': True
+                },
+            {
+                'poc1': True, 'prc1': False,   'gc1': True,  'tc1': False,
+                'poc2': False, 'prc2': True,   'gc2': True,  'tc2': True
+            },
+            {
+                'poc1': True, 'prc1': False,  'gc1': True,  'tc1': False,
+                'poc2': False, 'prc2': False,  'gc2': True,  'tc2': True
+                },
+            {
+                'poc1': True,  'prc1': False,  'gc1': True,  'tc1': False,
+                'poc2': True,  'prc2': False,  'gc2': True,  'tc2': True
+                }
+            ]
+        self.curr_state = self.trace[0]
+        self.index = 1
+
+    def step(self):
+        self.curr_state = self.trace[self.index]
+        self.index += 1
 
 class bcolors:
     HEADER = '\033[95m'
@@ -178,7 +233,56 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
-def run_experiment():
+def run_experiment_until():
+    ppatask1 = "G(gc1) & (poc1 | (prc1 & (tc1 U ((poc1) & G(gc1)))))"
+    ppatask2 = "G(gc2) & (poc2 | (prc2 & (tc2 U ((poc2) & G(gc2)))))"
+    mission = '((k) U (l))'
+    parser = LTLfParser()
+    mission_formual = parser(mission)
+    long_mission = '(' +ppatask1 + ') U (' + ppatask2 + ')'
+    parser = LTLfParser()
+    long_formula = parser(long_mission)
+    print(long_formula)
+    env = UntilSuccessEnvironment1()
+    bboard = blackboard.Client(name='gbt')
+    bboard.register_key(key='trace', access=common.Access.WRITE)
+    bboard.trace = [env.curr_state]
+    action_node1 = ActionNode('poc1', env=env, task_max=3)
+    ppatask1_bt = create_action_GBT('prc1', 'poc1', 'tc1', 'gc1', action_node1)
+    action_node2 = ActionNode('poc2', env=env, task_max=3)
+    ppatask2_bt = create_action_GBT('prc2', 'poc2', 'tc2', 'gc2', action_node2)
+    mappings = {'k': ppatask1_bt, 'l': ppatask2_bt}
+    gbt = parse_ltlf(mission_formual, mappings, task_max=3)
+    # print(ppatask_bt, gbt)
+    gbt = BehaviourTree(gbt)
+    print(py_trees.display.ascii_tree(gbt.root))
+    py_trees.logging.level = py_trees.logging.Level.DEBUG
+
+    while True:
+        gbt.tick()
+        # print(env.curr_state)
+        if (gbt.root.status == common.Status.SUCCESS or gbt.root.status == common.Status.FAILURE):
+            break
+    ltlf_status = long_formula.truth(bboard.trace, 0)
+    bt_status = gbt.root.status
+    trace = bboard.trace
+    if ltlf_status is True and bt_status == common.Status.SUCCESS:
+        print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(
+            trace, bt_status, ltlf_status))
+        # pass
+    elif ltlf_status is False and bt_status == common.Status.FAILURE:
+        print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(
+            trace, bt_status, ltlf_status))
+        # pass
+    else:
+        print("{} trace: {}, BT status: {}, LTLf status: {} {}".format(
+            bcolors.WARNING, trace, bt_status, ltlf_status, bcolors.ENDC))
+        print(gbt.root.status, ltlf_status)
+
+    # return (len(trace), ltlf_status, bt_status==common.Status.SUCCESS)
+
+
+def run_experiment_finally():
     ppatask_formula = "G(gc) & (poc | (prc & (tc U ((poc) & G(gc)))))"
     parser = LTLfParser()
     formula = parser(ppatask_formula)
@@ -188,9 +292,9 @@ def run_experiment():
     mission_formual = parser(mission)
     long_mission = 'F(' + ppatask_formula + ')'
     parser = LTLfParser()
-    long_formual = parser(long_mission)
-    print(long_formual)
-    env = SuccessEnvironment2()
+    long_formula = parser(long_mission)
+    print(long_formula)
+    env = FinallyFailureEnvironment2()
     bboard = blackboard.Client(name='gbt')
     bboard.register_key(key='trace', access=common.Access.WRITE)
     bboard.trace = [env.curr_state]
@@ -209,7 +313,7 @@ def run_experiment():
         # print(env.curr_state)
         if (gbt.root.status == common.Status.SUCCESS or gbt.root.status == common.Status.FAILURE):
             break
-    ltlf_status = formula.truth(bboard.trace, 0)
+    ltlf_status = long_formula.truth(bboard.trace, 0)
     bt_status = gbt.root.status
     trace = bboard.trace
     if ltlf_status is True and bt_status == common.Status.SUCCESS:
@@ -229,7 +333,8 @@ def run_experiment():
 
 
 def main():
-    run_experiment()
+    # run_experiment_finally()
+    run_experiment_until()
 
 
 if __name__ == '__main__':
