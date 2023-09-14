@@ -402,13 +402,18 @@ def run_experiment_until(k):
     long_formula = parser(long_mission)
     # print(long_formula)
     # env = UntilSuccessEnvironment1()
-    env = Environment()
-    bboard = blackboard.Client(name='gbt')
-    bboard.register_key(key='trace', access=common.Access.WRITE)
-    bboard.trace = [env.curr_state]
-    action_node1 = ActionNode('poc1', env=env, task_max=3)
+    env1 = Environment1()
+    action_node1 = ActionNode('poc1', env=env1, task_max=3)
+    bboard1 = blackboard.Client(name='Action'+'poc1', namespace='poc1')
+    bboard1.register_key(key='trace', access=common.Access.WRITE)
+    bboard1.trace = [env1.curr_state]
     ppatask1_bt = create_action_GBT('prc1', 'poc1', 'tc1', 'gc1', action_node1)
-    action_node2 = ActionNode('poc2', env=env, task_max=3)
+
+    env2 = Environment2()
+    action_node2 = ActionNode('poc2', env=env2, task_max=3)
+    bboard2 = blackboard.Client(name='Action'+'poc2', namespace='poc2')
+    bboard2.register_key(key='trace', access=common.Access.WRITE)
+    bboard2.trace = [env2.curr_state]
     ppatask2_bt = create_action_GBT('prc2', 'poc2', 'tc2', 'gc2', action_node2)
     mappings = {'k': ppatask1_bt, 'l': ppatask2_bt}
     gbt = parse_ltlf(mission_formual, mappings, task_max=3)
@@ -416,15 +421,14 @@ def run_experiment_until(k):
     gbt = BehaviourTree(gbt)
     # print(py_trees.display.ascii_tree(gbt.root))
     # py_trees.logging.level = py_trees.logging.Level.DEBUG
-
     while True:
         gbt.tick()
         # print(env.curr_state)
         if (gbt.root.status == common.Status.SUCCESS or gbt.root.status == common.Status.FAILURE):
             break
-    ltlf_status = long_formula.truth(bboard.trace, 0)
+    traces = combine_traces(bboard1.trace, bboard2.trace)
+    ltlf_status = long_formula.truth(traces, 0)
     bt_status = gbt.root.status
-    trace = bboard.trace
     if ltlf_status is True and bt_status == common.Status.SUCCESS:
         # print("trace: {}', 'BT status: {}', 'LTLf status: {}".format(
         #     trace, bt_status, ltlf_status))
@@ -435,10 +439,10 @@ def run_experiment_until(k):
         pass
     else:
         print("{} trace: {}, BT status: {}, LTLf status: {} {}".format(
-            bcolors.WARNING, trace, bt_status, ltlf_status, bcolors.ENDC))
+            bcolors.WARNING, traces, bt_status, ltlf_status, bcolors.ENDC))
         print(gbt.root.status, ltlf_status)
 
-    return (len(trace), ltlf_status, bt_status==common.Status.SUCCESS)
+    return (len(traces), ltlf_status, bt_status==common.Status.SUCCESS)
 
 
 def run_experiment_finally(k):
@@ -625,12 +629,8 @@ def combine_traces_alt(traces1, traces2):
 
 
 def main():
-    # run_experiment_finally()
-    # run_experiment_until()
-    # run_experiment_and()
-    # run_experiment_or()
     with WorkerPool(n_jobs=8) as pool:
-        results = pool.map(run_experiment_and, range(1024*16), progress_bar=True)
+        results = pool.map(run_experiment_until, range(1024*16), progress_bar=True)
     pd_data = pd.DataFrame(data=np.array(results))
     # Where BT and LTf return success
     data_subset = pd_data.loc[(pd_data[1]==1) & (pd_data[1]==1)][0].to_numpy()
@@ -665,3 +665,4 @@ if __name__ == '__main__':
     # run_experiment_finally(9)
     # run_experiment_or(9)
     # run_experiment_and(9)
+    # run_experiment_until(9)
