@@ -105,6 +105,7 @@ class ActionNode(Behaviour):
 
     def reset(self, **kwargs):
         self.index = 0
+        self.env.reset()
 
     def update(self):
         """

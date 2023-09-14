@@ -6,6 +6,7 @@ from py_trees.decorators import Decorator, Inverter
 from py_trees.trees import BehaviourTree
 from py_trees.behaviour import Behaviour
 from py_trees import common, blackboard
+from py_trees.decorators import Retry
 import py_trees
 import copy
 import argparse
@@ -36,6 +37,7 @@ class Finally(Decorator):
         self.idx = 0
         self.memory = common.Status.SUCCESS
         self.task_max = task_max
+        self.child = [copy.copy(child)]* (task_max +2)
 
     def reset(self, i=0):
         self.memory = common.Status.SUCCESS
@@ -56,7 +58,10 @@ class Finally(Decorator):
         elif return_value == common.Status.FAILURE:
             self.idx += 1
             # print(self.idx, self.task_max, return_value)
-            # self.decorated = self.child[self.idx]
+            self.decorated = self.child[self.idx]
+            childrens = list(self.decorated.iterate())
+            action_node = [child for child in childrens if isinstance(child, ActionNode)]
+            action_node[0].reset()
             if self.idx > self.task_max:
                 return common.Status.FAILURE
             return common.Status.RUNNING
@@ -75,6 +80,7 @@ def parse_ltlf(formula, mappings, task_max=4):
                 or isinstance(formula, LTLfNext) or isinstance(formula, LTLfNot) ):
             if isinstance(formula, LTLfEventually):
                 return Finally(parse_ltlf(formula.f, mappings), task_max=task_max)
+                # return Retry(name='Retry', child=parse_ltlf(formula.f, mappings), num_failures=task_max)
 
         elif (isinstance(formula, LTLfAnd) or isinstance(formula, LTLfOr) or isinstance(formula, LTLfUntil)):
             if isinstance(formula, LTLfAnd):
@@ -164,6 +170,11 @@ class Environment():
             **self.random.choice(self.state_two)
             }
 
+    def reset(self):
+        self.curr_state = {
+            'poc1': False,  'prc1': True,  'gc1': True,  'tc1': True,
+            'poc2': False,  'prc2': True,  'gc2': True,  'tc2': True
+            }
 
 class FinallySuccessEnvironment1:
     def __init__(self) -> None:
@@ -201,14 +212,14 @@ class FinallySuccessEnvironment2:
 class FinallyFailureEnvironment2:
     def __init__(self) -> None:
         self.trace = [
-            {'poc': False, 'prc': True,   'gc': True,  'tc': True},
-            {'poc': False, 'prc': False,  'gc': True,  'tc': True},
-            {'poc': False, 'prc': False,  'gc': True,  'tc': True},
-            {'poc': False, 'prc': True,   'gc': True,  'tc': True},
-            {'poc': False, 'prc': False,  'gc': True,  'tc': True},
-            {'poc': False, 'prc': False,  'gc': True,  'tc': True},
-            {'poc': False, 'prc': False,  'gc': True,  'tc': False},
-            {'poc': True,  'prc': False,  'gc': True,  'tc': False}
+            {'poc1': False, 'prc1': True,   'gc1': True,  'tc1': True},
+            {'poc1': False, 'prc1': False,  'gc1': True,  'tc1': True},
+            {'poc1': False, 'prc1': False,  'gc1': True,  'tc1': True},
+            {'poc1': False, 'prc1': True,   'gc1': True,  'tc1': True},
+            {'poc1': False, 'prc1': False,  'gc1': True,  'tc1': True},
+            {'poc1': False, 'prc1': False,  'gc1': True,  'tc1': True},
+            {'poc1': False, 'prc1': False,  'gc1': True,  'tc1': False},
+            {'poc1': True,  'prc1': False,  'gc1': True,  'tc1': False}
             ]
         self.curr_state = self.trace[0]
         self.index = 1
@@ -216,6 +227,10 @@ class FinallyFailureEnvironment2:
     def step(self):
         self.curr_state = self.trace[self.index]
         self.index += 1
+
+    def reset(self):
+        self.curr_state = self.trace[0]
+        self.index = 1
 
 
 class UntilSuccessEnvironment1:
@@ -368,6 +383,7 @@ def run_experiment_finally(k):
     action_node = ActionNode('poc1', env=env, task_max=3)
     # ppatask_bt = create_PPATask_GBT('b', 'a', 'd', 'c', action_node)
     ppatask_bt = create_action_GBT('prc1', 'poc1', 'tc1', 'gc1', action_node)
+    # print(dir(ppatask_bt))
     mappings = {'k': ppatask_bt}
     gbt = parse_ltlf(mission_formual, mappings, task_max=3)
     # print(ppatask_bt, gbt)
@@ -501,7 +517,7 @@ def main():
     # run_experiment_and()
     # run_experiment_or()
     with WorkerPool(n_jobs=8) as pool:
-        results = pool.map(run_experiment_and, range(1024), progress_bar=True)
+        results = pool.map(run_experiment_finally, range(1024*16), progress_bar=True)
     pd_data = pd.DataFrame(data=np.array(results))
     # Where BT and LTf return success
     data_subset = pd_data.loc[(pd_data[1]==1) & (pd_data[1]==1)][0].to_numpy()
@@ -533,3 +549,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    # run_experiment_finally(9)
