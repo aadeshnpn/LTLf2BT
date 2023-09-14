@@ -79,7 +79,7 @@ class ActionNode(Behaviour):
         """Init method for the action node."""
         super(ActionNode, self).__init__('Action'+name)
         self.action_symbol = name
-        self.blackboard = blackboard.Client(name='gbt')
+        self.blackboard = blackboard.Client(name='Action'+name, namespace=name)
         self.blackboard.register_key(key='trace', access=common.Access.WRITE)
         self.env = env
         self.planner = planner
@@ -115,7 +115,7 @@ class ActionNode(Behaviour):
         # print('action node before',self.index, self.env.curr_state)
         self.env.step()
         self.index += 1
-        # print('action node after',self.index, self.env.curr_state)
+        # print('action node after',self.name, self.index, self.env.curr_state)
         self.blackboard.trace.append(self.env.curr_state)
         curr_symbol_truth_value = self.env.curr_state[self.action_symbol]
         if curr_symbol_truth_value and self.index <= self.task_max:
