@@ -379,6 +379,40 @@ class ORSuccessEnvironment1:
         self.index += 1
 
 
+class UntilSuccessEnv1:
+    def __init__(self) -> None:
+        self.trace = [
+            {'poc1': False, 'prc1': True,   'gc1': True,  'tc1': True},
+            {'poc1': False, 'prc1': True,   'gc1': True,  'tc1': True},
+            {'poc1': True, 'prc1': True,   'gc1': True,  'tc1': True},
+            {'poc1': True, 'prc1': True,   'gc1': True,  'tc1': True},
+            {'poc1': True, 'prc1': True,   'gc1': True,  'tc1': True}
+            ]
+        self.curr_state = self.trace[0]
+        self.index = 1
+
+    def step(self):
+        self.curr_state = self.trace[self.index]
+        self.index += 1
+
+
+class UntilSuccessEnv2:
+    def __init__(self) -> None:
+        self.trace = [
+            {'poc2': False, 'prc2': True,   'gc2': True,  'tc2': True},
+            {'poc2': False, 'prc2': True,   'gc2': True,  'tc2': True},
+            {'poc2': False, 'prc2': True,   'gc2': True,  'tc2': True},
+            {'poc2': True,  'prc2': True,   'gc2': True,  'tc2': True},
+            {'poc2': True,  'prc2': True,   'gc2': True,  'tc2': True}
+            ]
+        self.curr_state = self.trace[0]
+        self.index = 1
+
+    def step(self):
+        self.curr_state = self.trace[self.index]
+        self.index += 1
+
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -402,14 +436,14 @@ def run_experiment_until(k):
     long_formula = parser(long_mission)
     # print(long_formula)
     # env = UntilSuccessEnvironment1()
-    env1 = Environment1()
+    env1 = UntilSuccessEnv1()
     action_node1 = ActionNode('poc1', env=env1, task_max=3)
     bboard1 = blackboard.Client(name='Action'+'poc1', namespace='poc1')
     bboard1.register_key(key='trace', access=common.Access.WRITE)
     bboard1.trace = [env1.curr_state]
     ppatask1_bt = create_action_GBT('prc1', 'poc1', 'tc1', 'gc1', action_node1)
 
-    env2 = Environment2()
+    env2 = UntilSuccessEnv2()
     action_node2 = ActionNode('poc2', env=env2, task_max=3)
     bboard2 = blackboard.Client(name='Action'+'poc2', namespace='poc2')
     bboard2.register_key(key='trace', access=common.Access.WRITE)
@@ -459,10 +493,10 @@ def run_experiment_finally(k):
     # print(long_formula)
     # env = FinallyFailureEnvironment2()
     env = Environment()
-    bboard = blackboard.Client(name='gbt')
+    action_node = ActionNode('poc1', env=env, task_max=3)
+    bboard = blackboard.Client(name='Action'+'poc1', namespace='poc1')
     bboard.register_key(key='trace', access=common.Access.WRITE)
     bboard.trace = [env.curr_state]
-    action_node = ActionNode('poc1', env=env, task_max=3)
     # ppatask_bt = create_PPATask_GBT('b', 'a', 'd', 'c', action_node)
     ppatask_bt = create_action_GBT('prc1', 'poc1', 'tc1', 'gc1', action_node)
     # print(dir(ppatask_bt))
@@ -630,7 +664,7 @@ def combine_traces_alt(traces1, traces2):
 
 def main():
     with WorkerPool(n_jobs=8) as pool:
-        results = pool.map(run_experiment_until, range(1024*16), progress_bar=True)
+        results = pool.map(run_experiment_finally, range(16*16*16*16), progress_bar=True)
     pd_data = pd.DataFrame(data=np.array(results))
     # Where BT and LTf return success
     data_subset = pd_data.loc[(pd_data[1]==1) & (pd_data[1]==1)][0].to_numpy()
