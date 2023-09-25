@@ -436,14 +436,14 @@ def run_experiment_until(k):
     long_formula = parser(long_mission)
     # print(long_formula)
     # env = UntilSuccessEnvironment1()
-    env1 = UntilSuccessEnv1()
+    env1 = Environment1()
     action_node1 = ActionNode('poc1', env=env1, task_max=3)
     bboard1 = blackboard.Client(name='Action'+'poc1', namespace='poc1')
     bboard1.register_key(key='trace', access=common.Access.WRITE)
     bboard1.trace = [env1.curr_state]
     ppatask1_bt = create_action_GBT('prc1', 'poc1', 'tc1', 'gc1', action_node1)
 
-    env2 = UntilSuccessEnv2()
+    env2 = Environment2()
     action_node2 = ActionNode('poc2', env=env2, task_max=3)
     bboard2 = blackboard.Client(name='Action'+'poc2', namespace='poc2')
     bboard2.register_key(key='trace', access=common.Access.WRITE)
@@ -663,8 +663,8 @@ def combine_traces_alt(traces1, traces2):
 
 
 def main():
-    with WorkerPool(n_jobs=8) as pool:
-        results = pool.map(run_experiment_finally, range(16*16*16*16), progress_bar=True)
+    with WorkerPool(n_jobs=16) as pool:
+        results = pool.map(run_experiment_until, range(16*16*16*16), progress_bar=True)
     pd_data = pd.DataFrame(data=np.array(results))
     # Where BT and LTf return success
     data_subset = pd_data.loc[(pd_data[1]==1) & (pd_data[1]==1)][0].to_numpy()

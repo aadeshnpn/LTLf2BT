@@ -51,13 +51,12 @@ def plot_success_prob(success_prob, ax_power, i):
     xrange = range(1, 9)
     # print('plot',success_prob)
     ax_power.scatter(xrange, success_prob, alpha=0.5, s=100, marker="x")
-    if i ==0:
+    if i ==3:
         ax_power.set_ylabel('Success Probability', fontsize='x-large')
-        ax_power.set_xlabel('Uncertainty', fontsize='x-large' )
     ax_power.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
     ax_power.set_yticklabels([0.2, 0.4, 0.6, 0.8, 1.0], fontsize='large')
     ax_power.set_xticks([2, 4, 6, 8])
-    ax_power.set_xticklabels([2, 4, 6, 8], fontsize='large')
+    ax_power.set_xticklabels([0.9, 0.8, 0.6, 0.4], fontsize='large')
     ax_power.set_title(rewards[i], fontsize='x-large')
 
 
@@ -115,13 +114,13 @@ def plot_trace_len(trace_len, ax_eff, i):
             trace_len, 0, sym='', showmeans=True, meanline=True,
             patch_artist=True, medianprops=medianprops,
             meanprops=meanprops, widths=0.8)
-    if i ==0:
+    if i ==3:
         ax_eff.set_ylabel('Trace Length', fontsize='x-large')
-        ax_eff.set_xlabel('Uncertainty', fontsize='x-large')
+        # ax_eff.set_xlabel('Uncertainty', fontsize='x-large')
     ax_eff.set_yticks([10, 20, 30, 40])
     ax_eff.set_yticklabels([10, 20, 30, 40], fontsize='large')
     ax_eff.set_xticks([2,4,6,8])
-    ax_eff.set_xticklabels([2,4,6,8], fontsize='large')
+    ax_eff.set_xticklabels([0.9, 0.8, 0.6, 0.4], fontsize='large')
     ax_eff.set_title(rewards[i], fontsize='x-large')
 
 
@@ -198,12 +197,21 @@ def plot_arms_paper(info, fname='cheese_home'):
     i=0
     for reward in rewards:
         ax_power = fig.add_subplot(4, 2, subplot[i])
+        ax_power.sharex =True
+        ax_power.sharey =True
         ax_eff = fig.add_subplot(4, 2, subplot[i]+1)
         plot_success_prob(info[reward]['success'], ax_power, i)
         plot_trace_len(info[reward]['trace'], ax_eff, i)
         i = i+1
 
-    plt.tight_layout(pad=0.5)
+    plt.xlabel(
+            'Intended Action Probablity',
+            fontsize='x-large', loc="right")
+    # plt.set_label_coords(.9, -.1)
+    plt.tight_layout(pad=0.8)
+    # fig.x
+    # fig.text(0.5, 0.04, 'Intended Action Probability', ha='center')
+
     maindir = '/tmp/'
     # fname = 'mpd_efficiency_30'
     fig.savefig(

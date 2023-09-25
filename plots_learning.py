@@ -456,12 +456,12 @@ def plot_power_cobined(
 
     ax_power.legend(
         zip(bp2['boxes']), ['Learning', 'Inference'], fontsize="large", loc="lower left")
-    ax_power.set_ylabel('Success Probability', fontsize='large' )
-    ax_power.set_xlabel('Uncertainty', fontsize='large')
+    ax_power.set_ylabel('Success Probability', fontsize='x-large' )
+    # ax_power.set_xlabel('Uncertainty', fontsize='large')
     ax_power.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
     ax_power.set_yticklabels([0.2, 0.4, 0.6, 0.8, 1.0], fontsize='large')
     ax_power.set_xticks([1.5, 4.5, 7.5, 10.5])
-    ax_power.set_xticklabels([1, 2, 3, 4], fontsize='large')
+    ax_power.set_xticklabels([0.95, 0.9, 0.8, 0.7], fontsize='large')
     # ax_power.set_title('Resiliency Power')
 
     # plt.tight_layout(pad=0.5)
@@ -543,13 +543,13 @@ def plot_efficiency_combined(
     # ax_power.legend(
     #     zip(bp2['boxes']), ['Learning Efficiency', 'Inference Efficiency'],
     #     fontsize="large", loc="upper left", title='Efficiency Metric')
-    ax_power.set_ylabel('Trace Length', fontsize='large' )
-    ax_power.set_xlabel('Uncertainty', fontsize='large')
+    ax_power.set_ylabel('Trace Length', fontsize='x-large' )
+    # ax_power.set_xlabel('Uncertainty', fontsize='large')
 
     ax_power.set_yticks([10,20,30,40,50])
     ax_power.set_yticklabels([10,20,30,40,50], fontsize='large')
     ax_power.set_xticks([1.5, 4.5, 7.5, 10.5])
-    ax_power.set_xticklabels([1,2,3,4], fontsize='large')
+    ax_power.set_xticklabels([0.95, 0.9, 0.8, 0.7], fontsize='large')
     # ax_power.set_title('Resiliency Efficiency')
 
     # plt.tight_layout(pad=0.5)
@@ -567,10 +567,17 @@ def combine_plots(data, data_rand, fname='learning_cheese_home'):
     fig_power = plt.figure(figsize=(6, 4), dpi=100)
     ax_power = fig_power.add_subplot(1, 2, 1)
     ax_eff = fig_power.add_subplot(1, 2, 2)
+    ax_power.sharex =True
+    # ax_power.sharey =True
+    ax_eff.sharex = True
     plot_power_cobined(
         data, data_rand, tracelen=50, propsteps=200, discount=0.9, ax=ax_power)
     plot_efficiency_combined(
         data, data_rand, tracelen=50, propsteps=200, discount=0.9, ax=ax_eff)
+
+    plt.xlabel(
+            'Intended Action Probablity',
+            fontsize='x-large', loc="right")
 
     plt.tight_layout(pad=0.5)
     maindir = '/tmp/'

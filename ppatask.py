@@ -126,6 +126,43 @@ class ActionNode(Behaviour):
             return common.Status.FAILURE
 
 
+class PreCond(Decorator):
+    """Decorator node for the Precondition decorator.
+
+    Inherits the Decorator class from py_trees. This
+    behavior implements the Precondition decorator logic.
+    """
+    def __init__(self, child, name='PrC'):
+        """
+        Init with the decorated child.
+
+        Args:
+            child : child behaviour node
+            name : the decorator name
+        """
+        super(PreCond, self).__init__(name=name, child=child)
+        self.memory = common.Status.SUCCESS
+        self.idx = 0
+
+    def reset(self, i=0):
+        self.memory = common.Status.SUCCESS
+
+    def update(self):
+        """
+        Main function that is called when BT ticks.
+        This returns the Precondition logic
+        """
+        #  Repeat until logic for decorator
+        return_value = self.decorated.status
+
+        if (self.idx ==0 and return_value == common.Status.SUCCESS):
+            self.memory = common.Status.SUCCESS
+        elif (self.idx ==0 and return_value == common.Status.FAILURE):
+            self.memory = common.Status.FAILURE
+        self.idx += 1
+        return self.memory
+
+
 def create_PPATask_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
     ppatask = Parallel(
         'pi_ppatask',
@@ -172,13 +209,14 @@ def create_action_GBT(precond, postcond, taskcnstr, gblcnstr, action_node):
         policy=py_trees.common.ParallelPolicy.SuccessOnAll(
             synchronise=False))
     precond_node = ConditionNode(precond,  env=action_node.env)
+    precond_decorator = PreCond(precond_node)
     postcond_node = ConditionNode(postcond, env=action_node.env)
     taskcnstr_node = ConditionNode(taskcnstr, env=action_node.env)
     gblcnstr_node_first = ConditionNode(gblcnstr, env=action_node.env)
     gblcnstr_node_second = ConditionNode(gblcnstr, env=action_node.env)
     action_seq.add_children([action_node, gblcnstr_node_second])
     until_seq.add_children([taskcnstr_node, action_seq])
-    task_seq.add_children([precond_node, until_seq])
+    task_seq.add_children([precond_decorator, until_seq])
     post_blk.add_children([postcond_node, task_seq])
     ppatask.add_children([gblcnstr_node_first, post_blk])
     return ppatask
@@ -356,10 +394,11 @@ def verify_trace(x):
     #     SuccessEnvironment1(), SuccessEnvironment2(), SuccessEnvironment3(), SuccessEnvironment4(),
     #     FailureEnvironment1(), FailureEnvironment2(), FailureEnvironment3(), SuccessEnvironment5()]:
     # env = SuccessEnvironment5()
-    bboard = blackboard.Client(name='gbt')
+    action_node = ActionNode('a', env=env, task_max=5)
+    bboard = blackboard.Client(name='Action'+'a', namespace='a')
     bboard.register_key(key='trace', access=common.Access.WRITE)
     bboard.trace = [env.curr_state]
-    action_node = ActionNode('a', env=env, task_max=5)
+
     # ppatask_bt = create_PPATask_GBT('b', 'a', 'd', 'c', action_node)
     ppatask_bt = create_action_GBT('b', 'a', 'd', 'c', action_node)
     bt = BehaviourTree(ppatask_bt)
@@ -389,10 +428,11 @@ def verify_trace(x):
 
     return (len(trace), ltlf_status, bt_status==common.Status.SUCCESS)
 
+
 def main():
     ## a,b,c,d -> PoC, PrC, GC, TC
     with WorkerPool(n_jobs=16) as pool:
-        results = pool.map(verify_trace, range(1024*1024), progress_bar=True)
+        results = pool.map(verify_trace, range(1024*16), progress_bar=True)
     pd_data = pd.DataFrame(data=np.array(results))
     # Where BT and LTf return success
     data_subset = pd_data.loc[(pd_data[1]==1) & (pd_data[1]==1)][0].to_numpy()
